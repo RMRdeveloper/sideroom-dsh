@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "title": "Sideroom",
+    "description": "Carga las guías de código antes de editar, revisa las líneas que agregas y pide una revisión antes de dar el trabajo por terminado."
+  },
+  "rows": {
+    "sideroom": {
+      "title": "Capa de calidad Sideroom",
+      "description": "Gate de guías, chequeo de reglas y revisión al terminar de editar."
+    }
+  }
+}

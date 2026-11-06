@@ -1,0 +1,52 @@
+{
+  "name": "sideroom-dsh",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Quality layer for DeepSeek Harness: guidelines gate, mechanical rule checks, and an end-of-edit review prompt.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RMRdeveloper/sideroom-dsh.git"
+  },
+  "homepage": "https://github.com/RMRdeveloper/sideroom-dsh#readme",
+  "bugs": {
+    "url": "https://github.com/RMRdeveloper/sideroom-dsh/issues"
+  },
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "lib/**/*.js",
+    "!lib/test/**",
+    "cordis.patch.yml",
+    "assets/**/*.md",
+    "locale/*.json",
+    "icon.svg",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test lib/test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-skill": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
+    "@types/node": "^22.20.5",
+    "typescript": "~5.9.3"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

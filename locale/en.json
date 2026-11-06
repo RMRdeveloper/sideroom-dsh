@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "title": "Sideroom",
+    "description": "Loads the coding guidelines before an edit, checks the lines you add, and asks for a review before the work is called done."
+  },
+  "rows": {
+    "sideroom": {
+      "title": "Sideroom quality layer",
+      "description": "Guidelines gate, rule checks, and end-of-edit review."
+    }
+  }
+}

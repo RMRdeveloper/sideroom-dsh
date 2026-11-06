@@ -1,0 +1,31 @@
+- insert:
+    - id: sideroom
+      name: 'sideroom-dsh'
+      config:
+        guidelines:
+          enabled: true
+          gateUnrecognized: false
+        rules:
+          enabled: true
+          blocking:
+            - braced-conditionals
+            - swallowed-errors
+          notes:
+            - clear-names
+            - stale-comments
+            - commented-code
+            - debug-artifacts
+          degradeAfter: 3
+          resetAfter: 5
+        review:
+          enabled: true
+        prompt:
+          contract: true
+          explain: true
+        checks:
+          enabled: true
+        skills:
+          enabled: true
+          packaged: true
+          monorepo: true
+          maxDepth: 3
