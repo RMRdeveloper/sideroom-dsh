@@ -55,8 +55,14 @@ asking for a rerun.
 Requires DeepSeek Harness `0.2.2-rc.1` (tested). From git:
 
 ```bash
+# web profile
 dsh plugin --profile web add github:RMRdeveloper/sideroom-dsh
+
+# desktop profile
+dsh plugin --profile desktop add github:RMRdeveloper/sideroom-dsh
 ```
+
+Use the profile you actually run: `web` for the browser, `desktop` for the desktop app.
 
 Then add `sideroom-dsh` to `dsh.profile.bundles` in that profile's `package.json` and restart the profile.
 The in-app Plugin manager does both steps for you.
