@@ -11,13 +11,13 @@ project checks.
 
 Host-side port. Working today:
 
-| Piece | Behavior |
-|---|---|
+| Piece           | Behavior                                                                                  |
+| --------------- | ----------------------------------------------------------------------------------------- |
 | Guidelines gate | `write` and `edit` are denied until the contract and the target language guide are loaded |
-| Rule engine | blocking and note rules over added lines only, with a per-rule circuit breaker |
-| Review | one request at turn end, after a successful mutation |
-| Checks | detects the project command, records green runs, feeds the review |
-| Skills | packaged sideroom skills plus an optional monorepo scan |
+| Rule engine     | blocking and note rules over added lines only, with a per-rule circuit breaker            |
+| Review          | one request at turn end, after a successful mutation                                      |
+| Checks          | detects the project command, records green runs, feeds the review                         |
+| Skills          | packaged sideroom skills plus an optional monorepo scan                                   |
 
 Not ported yet: the TUI board, the edited-files strip, `sideroom_ask`, `jev`, and the browser companion.
 `apply_patch` is not covered by the gate.
