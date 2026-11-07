@@ -1,48 +1,48 @@
 export function isBlank(line: string): boolean {
-  return line.trim() === ''
+  return line.trim() === '';
 }
 
 export function isLineComment(line: string): boolean {
-  return line.startsWith('//') || line.startsWith('#')
+  return line.startsWith('//') || line.startsWith('#');
 }
 
 export function closingParen(text: string, open: number): number {
-  let depth = 0
+  let depth = 0;
   for (let index = open; index < text.length; index += 1) {
-    const character = text[index]
+    const character = text[index];
     if (character === '(') {
-      depth += 1
+      depth += 1;
     } else if (character === ')') {
-      depth -= 1
+      depth -= 1;
       if (depth === 0) {
-        return index
+        return index;
       }
     }
   }
-  return -1
+  return -1;
 }
 
 export function nextMeaningful(lines: string[], from: number): string | null {
   for (let index = from; index < lines.length; index += 1) {
-    const text = lines[index].trim()
+    const text = lines[index].trim();
     if (text !== '') {
-      return text
+      return text;
     }
   }
-  return null
+  return null;
 }
 
 export function blockBody(lines: string[], from: number): string[] {
-  const body: string[] = []
+  const body: string[] = [];
   for (let index = from; index < lines.length; index += 1) {
-    const trimmed = lines[index].trim()
+    const trimmed = lines[index].trim();
     if (trimmed.startsWith('}')) {
-      break
+      break;
     }
     if (trimmed === '' || trimmed.startsWith('//') || trimmed.startsWith('*')) {
-      continue
+      continue;
     }
-    body.push(trimmed)
+    body.push(trimmed);
   }
-  return body
+  return body;
 }

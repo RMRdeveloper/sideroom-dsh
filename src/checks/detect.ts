@@ -1,13 +1,13 @@
-import { readFile, access } from 'node:fs/promises'
-import { join } from 'node:path'
-import { isMissingPathError } from '../errors.js'
+import { readFile, access } from 'node:fs/promises';
+import { join } from 'node:path';
+import { isMissingPathError } from '@/errors.js';
 
 export interface CheckCommand {
-  command: string
-  source: string
+  command: string;
+  source: string;
 }
 
-const SCRIPT_PRIORITY = ['check', 'test', 'lint', 'typecheck', 'types']
+const SCRIPT_PRIORITY = ['check', 'test', 'lint', 'typecheck', 'types'];
 
 const MANAGERS: Array<{ lockfile: string; prefix: string }> = [
   { lockfile: 'pnpm-lock.yaml', prefix: 'pnpm' },
@@ -15,92 +15,101 @@ const MANAGERS: Array<{ lockfile: string; prefix: string }> = [
   { lockfile: 'bun.lockb', prefix: 'bun run' },
   { lockfile: 'bun.lock', prefix: 'bun run' },
   { lockfile: 'package-lock.json', prefix: 'npm run' },
-]
+];
 
 async function fileExists(path: string): Promise<boolean> {
   try {
-    await access(path)
-    return true
+    await access(path);
+    return true;
   } catch (error) {
     if (isMissingPathError(error)) {
-      return false
+      return false;
     }
-    throw new Error(`sideroom-dsh: cannot inspect ${path}`, { cause: error })
+    throw new Error(`sideroom-dsh: cannot inspect ${path}`, { cause: error });
   }
 }
 
 async function readText(path: string): Promise<string | null> {
   try {
-    const text = await readFile(path, 'utf8')
-    return text.replace(/^\uFEFF/, '')
+    const text = await readFile(path, 'utf8');
+    return text.replace(/^\uFEFF/, '');
   } catch (error) {
     if (isMissingPathError(error)) {
-      return null
+      return null;
     }
-    throw new Error(`sideroom-dsh: cannot read ${path}`, { cause: error })
+    throw new Error(`sideroom-dsh: cannot read ${path}`, { cause: error });
   }
 }
 
 async function managerPrefix(cwd: string): Promise<string> {
   for (const manager of MANAGERS) {
     if (await fileExists(join(cwd, manager.lockfile))) {
-      return manager.prefix
+      return manager.prefix;
     }
   }
-  return 'npm run'
+  return 'npm run';
+}
+
+function collapseHorizontalSpace(value: string): string {
+  return value.replace(/[ \t]+/g, ' ').trim();
+}
+
+export function commandMatches(text: string, command: string): boolean {
+  return collapseHorizontalSpace(text) === collapseHorizontalSpace(command);
 }
 
 async function packageScriptCommand(cwd: string): Promise<CheckCommand | null> {
-  const raw = await readText(join(cwd, 'package.json'))
+  const raw = await readText(join(cwd, 'package.json'));
   if (raw === null) {
-    return null
+    return null;
   }
-  let manifest: unknown
+  let manifest: unknown;
   try {
-    manifest = JSON.parse(raw)
+    manifest = JSON.parse(raw);
   } catch (error) {
     throw new Error(`sideroom-dsh: invalid package.json in ${cwd}`, {
       cause: error,
-    })
+    });
   }
-  const scripts =
-    typeof manifest === 'object' && manifest !== null
+  const scripts
+    = typeof manifest === 'object' && manifest !== null
       ? (manifest as { scripts?: unknown }).scripts
-      : undefined
+      : undefined;
   if (typeof scripts !== 'object' || scripts === null) {
-    return null
+    return null;
   }
-  const available = scripts as Record<string, unknown>
+  const available = scripts as Record<string, unknown>;
   for (const name of SCRIPT_PRIORITY) {
     if (typeof available[name] === 'string') {
-      const prefix = await managerPrefix(cwd)
-      return { command: `${prefix} ${name}`, source: 'package.json' }
+      const prefix = await managerPrefix(cwd);
+      return { command: `${prefix} ${name}`, source: 'package.json' };
     }
   }
-  return null
+  return null;
 }
 
 export async function detectCheckCommand(
-  cwd: string
+  cwd: string,
 ): Promise<CheckCommand | null> {
-  const fromScripts = await packageScriptCommand(cwd)
+  const fromScripts = await packageScriptCommand(cwd);
   if (fromScripts !== null) {
-    return fromScripts
+    return fromScripts;
   }
   if (await fileExists(join(cwd, 'go.mod'))) {
-    return { command: 'go test ./...', source: 'go.mod' }
+    return { command: 'go test ./...', source: 'go.mod' };
   }
   if (await fileExists(join(cwd, 'Cargo.toml'))) {
-    return { command: 'cargo test', source: 'Cargo.toml' }
+    return { command: 'cargo test', source: 'Cargo.toml' };
   }
-  const pyproject = await fileExists(join(cwd, 'pyproject.toml'))
-  const pytestIni = await fileExists(join(cwd, 'pytest.ini'))
-  if (pyproject || pytestIni) {
-    return { command: 'pytest -q', source: 'python' }
+  const pyproject = await fileExists(join(cwd, 'pyproject.toml'));
+  const setupPy = await fileExists(join(cwd, 'setup.py'));
+  const pytestIni = await fileExists(join(cwd, 'pytest.ini'));
+  if (pyproject || setupPy || pytestIni) {
+    return { command: 'pytest -q', source: 'python' };
   }
-  const makefile = await readText(join(cwd, 'Makefile'))
+  const makefile = await readText(join(cwd, 'Makefile'));
   if (makefile !== null && /^check:/m.test(makefile)) {
-    return { command: 'make check', source: 'Makefile' }
+    return { command: 'make check', source: 'Makefile' };
   }
-  return null
+  return null;
 }

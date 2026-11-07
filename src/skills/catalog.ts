@@ -1,50 +1,50 @@
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import type { SkillRegistration } from '@deepseek-ai/dsh-skill'
-import { isMissingPathError } from '../errors.js'
-import { booleanField, parseFrontmatter } from './frontmatter.js'
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type { SkillRegistration } from '@deepseek-ai/dsh-skill';
+import { isMissingPathError } from '@/errors.js';
+import { booleanField, parseFrontmatter } from '@/skills/frontmatter.js';
 
 function readSkillFile(path: string): string | null {
   try {
-    return readFileSync(path, 'utf8')
+    return readFileSync(path, 'utf8');
   } catch (error) {
     if (isMissingPathError(error)) {
-      return null
+      return null;
     }
     throw new Error(`sideroom-dsh: cannot read skill file ${path}`, {
       cause: error,
-    })
+    });
   }
 }
 
 export function createSkillCatalog(packageRoot: string): SkillRegistration[] {
-  const directory = join(packageRoot, 'assets', 'skills')
-  let entries
+  const directory = join(packageRoot, 'assets', 'skills');
+  let entries;
   try {
-    entries = readdirSync(directory, { withFileTypes: true })
+    entries = readdirSync(directory, { withFileTypes: true });
   } catch (error) {
     if (isMissingPathError(error)) {
-      return []
+      return [];
     }
-    throw new Error(`sideroom-dsh: cannot list ${directory}`, { cause: error })
+    throw new Error(`sideroom-dsh: cannot list ${directory}`, { cause: error });
   }
 
-  const registrations: SkillRegistration[] = []
+  const registrations: SkillRegistration[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) {
-      continue
+      continue;
     }
-    const skillDirectory = join(directory, entry.name)
-    const file = join(skillDirectory, 'SKILL.md')
-    const text = readSkillFile(file)
+    const skillDirectory = join(directory, entry.name);
+    const file = join(skillDirectory, 'SKILL.md');
+    const text = readSkillFile(file);
     if (text === null) {
-      continue
+      continue;
     }
-    const parsed = parseFrontmatter(text)
-    const name = parsed.fields.name ?? entry.name
-    const description = parsed.fields.description
+    const parsed = parseFrontmatter(text);
+    const name = parsed.fields.name ?? entry.name;
+    const description = parsed.fields.description;
     if (description === undefined) {
-      continue
+      continue;
     }
     registrations.push({
       name,
@@ -57,11 +57,11 @@ export function createSkillCatalog(packageRoot: string): SkillRegistration[] {
         modelInvocable: !booleanField(
           parsed.fields,
           'disable-model-invocation',
-          false
+          false,
         ),
         userInvocable: booleanField(parsed.fields, 'user-invocable', true),
       },
-    })
+    });
   }
-  return registrations
+  return registrations;
 }

@@ -1,82 +1,161 @@
-import { detectCheckCommand, type CheckCommand } from './detect.js'
+import {
+  commandMatches,
+  detectCheckCommand,
+  type CheckCommand,
+} from '@/checks/detect.js';
 
 export interface CheckStatus {
-  command: string | null
-  green: boolean
+  command: string | null;
+  green: boolean;
+}
+
+export interface ShellStart {
+  agentId: string;
+  callId: string;
+  cwd: string;
+  commandLine: string;
 }
 
 export interface ShellObservation {
-  agentId: string
-  cwd: string
-  commandLine: string
+  agentId: string;
+  callId: string;
+  cwd: string;
+  succeeded: boolean;
 }
 
 export interface CheckTracker {
-  beginTurn(agentId: string): void
-  observeMutation(agentId: string): void
-  observeShell(observation: ShellObservation): Promise<void>
-  refresh(agentId: string, cwd: string): Promise<void>
-  statusOf(agentId: string): CheckStatus
+  beginTurn(agentId: string, turn: number): void;
+  startShell(start: ShellStart): Promise<void>;
+  observeMutation(agentId: string, cwd: string): void;
+  observeShell(observation: ShellObservation): void;
+  refresh(agentId: string, cwd: string): Promise<void>;
+  statusOf(agentId: string, cwd: string): CheckStatus;
+}
+
+interface DirectoryCheck {
+  command: string | null;
+  green: boolean;
+  version: number;
+}
+
+interface StartedCheck {
+  agentId: string;
+  cwd: string;
+  version: number;
 }
 
 export function createCheckTracker(): CheckTracker {
-  const commands = new Map<string, CheckCommand | null>()
-  const states = new Map<string, CheckStatus>()
+  const commands = new Map<string, CheckCommand | null>();
+  const directories = new Map<string, Map<string, DirectoryCheck>>();
+  const started = new Map<string, StartedCheck>();
+  const turns = new Map<string, number>();
 
-  function stateFor(agentId: string): CheckStatus {
-    let status = states.get(agentId)
-    if (status === undefined) {
-      status = { command: null, green: false }
-      states.set(agentId, status)
+  function directoryFor(agentId: string, cwd: string): DirectoryCheck {
+    let byDirectory = directories.get(agentId);
+    if (byDirectory === undefined) {
+      byDirectory = new Map();
+      directories.set(agentId, byDirectory);
     }
-    return status
+    let state = byDirectory.get(cwd);
+    if (state === undefined) {
+      state = { command: null, green: false, version: 0 };
+      byDirectory.set(cwd, state);
+    }
+    return state;
   }
 
   async function commandFor(cwd: string): Promise<CheckCommand | null> {
-    if (commands.has(cwd)) {
-      return commands.get(cwd) ?? null
+    const cached = commands.get(cwd);
+    if (cached !== undefined) {
+      return cached;
     }
-    const detected = await detectCheckCommand(cwd)
-    commands.set(cwd, detected)
-    return detected
+    const detected = await detectCheckCommand(cwd);
+    commands.set(cwd, detected);
+    return detected;
   }
 
-  function beginTurn(agentId: string): void {
-    states.set(agentId, { command: null, green: false })
+  function beginTurn(agentId: string, turn: number): void {
+    if (turns.get(agentId) === turn) {
+      return;
+    }
+    turns.set(agentId, turn);
+    directories.set(agentId, new Map());
+    for (const [callId, record] of started) {
+      if (record.agentId === agentId) {
+        started.delete(callId);
+      }
+    }
   }
 
-  function observeMutation(agentId: string): void {
-    commands.clear()
-    states.set(agentId, { command: stateFor(agentId).command, green: false })
-  }
-
-  async function observeShell({
+  async function startShell({
     agentId,
+    callId,
     cwd,
     commandLine,
-  }: ShellObservation): Promise<void> {
-    const detected = await commandFor(cwd)
-    if (detected === null || !commandLine.includes(detected.command)) {
-      return
+  }: ShellStart): Promise<void> {
+    const detected = await commandFor(cwd);
+    if (detected === null || !commandMatches(commandLine, detected.command)) {
+      return;
     }
-    states.set(agentId, { command: detected.command, green: true })
+    const state = directoryFor(agentId, cwd);
+    state.command = detected.command;
+    started.set(callId, { agentId, cwd, version: state.version });
+  }
+
+  function observeMutation(agentId: string, cwd: string): void {
+    const state = directoryFor(agentId, cwd);
+    state.green = false;
+    state.version += 1;
+    commands.clear();
+  }
+
+  function observeShell({
+    agentId,
+    callId,
+    cwd,
+    succeeded,
+  }: ShellObservation): void {
+    const record = started.get(callId);
+    if (record === undefined) {
+      return;
+    }
+    started.delete(callId);
+    if (record.agentId !== agentId || record.cwd !== cwd) {
+      return;
+    }
+    const state = directoryFor(agentId, cwd);
+    if (record.version !== state.version) {
+      return;
+    }
+    state.green = succeeded;
   }
 
   async function refresh(agentId: string, cwd: string): Promise<void> {
-    const status = stateFor(agentId)
-    if (status.command !== null) {
-      return
+    const state = directoryFor(agentId, cwd);
+    if (state.command !== null) {
+      return;
     }
-    const detected = await commandFor(cwd)
+    const detected = await commandFor(cwd);
     if (detected === null) {
-      return
+      return;
     }
-    states.set(agentId, { command: detected.command, green: status.green })
+    state.command = detected.command;
   }
 
-  function statusOf(agentId: string): CheckStatus {
-    return stateFor(agentId)
+  function statusOf(agentId: string, cwd: string): CheckStatus {
+    const state = directories.get(agentId)?.get(cwd);
+    if (state === undefined) {
+      return { command: null, green: false };
+    }
+    return { command: state.command, green: state.green };
   }
 
-  return { beginTurn, observeMutation, observeShell, refresh, statusOf }
+  return {
+    beginTurn,
+    startShell,
+    observeMutation,
+    observeShell,
+    refresh,
+    statusOf,
+  };
 }

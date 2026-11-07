@@ -1,45 +1,45 @@
 export interface ParsedFrontmatter {
-  fields: Record<string, string>
-  body: string
+  fields: Record<string, string>;
+  body: string;
 }
 
 export function parseFrontmatter(text: string): ParsedFrontmatter {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text)
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
   if (match === null) {
-    return { fields: {}, body: text }
+    return { fields: {}, body: text };
   }
-  const fields: Record<string, string> = {}
+  const fields: Record<string, string> = {};
   for (const line of match[1].split(/\r?\n/)) {
-    const pair = /^([A-Za-z0-9_-]+)\s*:\s*(.*)$/.exec(line)
+    const pair = /^([A-Za-z0-9_-]+)\s*:\s*(.*)$/.exec(line);
     if (pair === null) {
-      continue
+      continue;
     }
-    fields[pair[1]] = pair[2].trim().replace(/^['"]/, '').replace(/['"]$/, '')
+    fields[pair[1]] = pair[2].trim().replace(/^['"]/, '').replace(/['"]$/, '');
   }
-  return { fields, body: text.slice(match[0].length) }
+  return { fields, body: text.slice(match[0].length) };
 }
 
 export function booleanField(
   fields: Record<string, string>,
   key: string,
-  fallback: boolean
+  fallback: boolean,
 ): boolean {
-  const raw = fields[key]
+  const raw = fields[key];
   if (raw === undefined) {
-    return fallback
+    return fallback;
   }
-  const normalized = raw.trim().toLowerCase()
+  const normalized = raw.trim().toLowerCase();
   if (normalized === 'true' || normalized === 'yes' || normalized === 'on') {
-    return true
+    return true;
   }
   if (normalized === 'false' || normalized === 'no' || normalized === 'off') {
-    return false
+    return false;
   }
   if (normalized === '1') {
-    return true
+    return true;
   }
   if (normalized === '0') {
-    return false
+    return false;
   }
-  return fallback
+  return fallback;
 }

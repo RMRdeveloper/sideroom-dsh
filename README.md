@@ -13,44 +13,68 @@ Published as [`@rmrdeveloper/sideroom-dsh`](https://www.npmjs.com/package/@rmrde
 
 Host-side port. Working today:
 
-| Piece           | Behavior                                                                                  |
-| --------------- | ----------------------------------------------------------------------------------------- |
-| Guidelines gate | `write` and `edit` are denied until the contract and the target language guide are loaded |
-| Rule engine     | blocking and note rules over added lines only, with a per-rule circuit breaker            |
-| Review          | one request at turn end, after a successful mutation                                      |
-| Checks          | detects the project command, records green runs, feeds the review                         |
-| Skills          | packaged sideroom skills plus an optional monorepo scan                                   |
+| Piece           | Behavior                                                                                                         |
+| --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Guidelines gate | `write`, `edit`, `apply_patch`, and `str_replace_editor` are denied until the contract and every target guide are loaded |
+| Rule engine     | blocking and note rules over added lines only, with a per-rule circuit breaker                                      |
+| Review          | one request at turn end, after a successful mutation, carrying the checks status                                    |
+| Checks          | detects the project command, confirms the exact command in its own directory, feeds the review                      |
+| Skills          | packaged sideroom skills plus an optional monorepo scan                                                             |
 
-Not ported yet: the TUI board, the edited-files strip, `sideroom_ask`, `jev`, and the browser companion.
-`apply_patch` is not covered by the gate.
+Not ported yet: the TUI board, the edited-files strip, `sideroom_ask`, `jev`, the browser companion,
+`sideroom_research`, and the active half of persona (`sideroom_persona`, the always-on reminder and the
+prose and artifact enforcement). The persona guide itself is packaged and registered as a skill.
 
 ## How it behaves
 
 ### Guidelines gate
 
-Before the first mutation of a run, the agent calls `sideroom_guidelines` with the target path. The tool
-returns the shared contract plus the guide for that language and unlocks `write`/`edit` for the run. A full
-`read` of the packaged asset also counts; partial reads (`offset`/`limit`) and failed reads do not. The
-loaded set resets at the start of every turn, so a new run starts clean.
+Before the first mutation of a turn, the agent calls `sideroom_guidelines` with a target path. The tool
+returns the shared contract plus the guide for that language and unlocks the mutation tools for the turn.
+Only that tool counts: a full `read` of the packaged asset is not observed, and a failed or partial load
+does not unlock anything. The loaded set resets when the turn changes, so a new turn starts clean.
 
-Unrecognized languages get the contract only. Set `guidelines.gateUnrecognized: true` to gate them too.
+`apply_patch` and `str_replace_editor` use the same gate and rules. A multi-file patch lists every target
+whose guide is missing, and a blocking line names the file it came from.
+
+Unrecognized languages get the contract only. Set `guidelines.gateUnrecognized: true` to gate them too;
+the rules still run only for known languages.
 
 ### Rules
 
-Only the added lines are inspected. Two rules block; the rest are notes appended to the tool result:
+Only the added lines are inspected. Three rules block; the rest are notes appended to the tool result:
 
-- Block: braced conditionals, swallowed errors.
-- Note: clear names, stale comments, commented-out code, debug artifacts.
+- Block: braced conditionals, explicit `any`, swallowed errors.
+- Note: clear names, stale comments, commented-out code, debug artifacts, suppressed type errors
+  (`@ts-ignore` and `@ts-nocheck`; `@ts-expect-error` is allowed).
 
-A rule that blocks `degradeAfter` times in a run becomes a note until `resetAfter` clean checks, so the
-agent cannot dead-lock on one rule.
+Strings and comments are masked before the TypeScript checks, so `'any'`, `anyValue`, and a comment that
+mentions `@ts-ignore` do not count. A rule that blocks `degradeAfter` times in a turn becomes a note until
+`resetAfter` clean checks, so the agent cannot dead-lock on one rule.
+
+`apply_patch` checks the lines its hunks add, per file. `str_replace_editor` checks `create`, `str_replace`,
+and `insert`; `view` is not a mutation.
 
 ### Review
 
-After a successful `write` or `edit`, the next turn end carries one review request: re-check every changed
-file against the loaded guide and run the relevant formatter, linter, type checks, and tests. It fires once
-per turn. When `checks` already observed a green run of the project command, the review reuses it instead of
-asking for a rerun.
+After a successful mutation, the next turn end sends one steering message: re-check every changed file
+against the loaded guide and run the relevant formatter, linter, type checks, and tests. It fires once per
+turn. When `checks` observed a green run of the detected command after the latest mutation in that
+directory, the review reuses it instead of asking for a rerun.
+
+The review is skipped when the turn is aborted, and it is cleared when the next turn starts, so a mutation
+from an earlier turn never produces a late review.
+
+### Checks
+
+The tracker detects the project command from `package.json` and the lockfile (`check` → `test` → `lint` →
+`typecheck` → `types`), `pytest -q` from `pyproject.toml`, `setup.py`, or `pytest.ini`, `go test ./...` from
+`go.mod`, `cargo test` from `Cargo.toml`, and `make check` from a `Makefile`.
+
+A result turns green only when the shell text matches the detected command exactly after collapsing
+horizontal whitespace, in that directory, and the command started after the latest mutation there. Extra
+arguments, `cd other && ...`, newlines, and joined commands are not confirmed. A failed rerun clears green,
+and a mutation invalidates it. State is kept per directory; a new turn forgets it.
 
 ## Install
 
@@ -89,8 +113,13 @@ The bundle patch ships these defaults:
         guidelines: { enabled: true, gateUnrecognized: false }
         rules:
           enabled: true
-          blocking: [braced-conditionals, swallowed-errors]
-          notes: [clear-names, stale-comments, commented-code, debug-artifacts]
+          blocking: [braced-conditionals, explicit-any, swallowed-errors]
+          notes:
+            - clear-names
+            - stale-comments
+            - commented-code
+            - debug-artifacts
+            - suppressed-type-errors
           degradeAfter: 3
           resetAfter: 5
         review: { enabled: true }
@@ -107,17 +136,33 @@ fails the bundle at load instead of silently disabling a gate.
 ```bash
 npm install
 npm run build
+npm run lint
+npm run lint:fix
 npm test
 npm run check
+npm run mutation
 ```
 
-`tsc` compiles `index.ts`, `src/`, and `test/` into `lib/`, and the bundle loads `lib/index.js`. `lib/` is
-committed so the plugin works from a clone without a build step; run `npm run build` before committing
-source changes.
+`npm run mutation` builds and runs Stryker over the compiled `lib/` with the TAP runner and per-test
+coverage. The report lands in `reports/` (ignored), and the 100% break threshold makes the run fail while
+any mutant survives.
 
-`npm run check` runs the tests and then `check:pack`, which packs the tarball the way `npm publish` would,
-asserts the file list, the patch row name, the locales, the icon and `engines.dsh`, and loads the entry
-point from the extracted tarball.
+All internal imports use the `@/*` alias (`@/config.js`), declared in `tsconfig.json` through `baseUrl`
+and `paths`. `tsc` does not rewrite path mappings, so the build runs `tsc-alias` after `tsc`; the compiled
+`lib/` uses relative imports and the plugin keeps working on plain Node.
+
+`tsc` compiles `index.ts` and `src/` into `lib/`, and the bundle loads `lib/index.js`. Tests live next to
+the file they cover (`src/checks/tracker.test.ts`, `index.test.ts`) and compile to `lib/**/*.test.js`,
+which is ignored and excluded from the package. `lib/` is committed so the plugin works from a clone
+without a build step; run `npm run build` before committing source changes.
+
+`npm run lint` runs ESLint with the type-aware rules, `@stylistic` formatting, and `no-comments`. The
+Husky `pre-commit` hook runs `eslint --fix` through `lint-staged` on every commit, so staged `.ts` and
+`.mjs` files are fixed before the commit lands.
+
+`npm run check` runs the type check, the lint, the tests, and then `check:pack`, which packs the tarball
+the way `npm publish` would, asserts the file list, the patch row name, the locales, the icon and
+`engines.dsh`, and loads the entry point from the extracted tarball.
 
 ## Releasing
 

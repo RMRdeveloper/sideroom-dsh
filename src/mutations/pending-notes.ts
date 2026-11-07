@@ -1,32 +1,32 @@
-import type { Finding } from '../rules/types.js'
+import type { Finding } from '@/rules/types.js';
 
 export interface PendingNote {
-  notes: Finding[]
-  target: string
+  notes: Finding[];
+  target: string;
 }
 
 export interface PendingNotes {
-  remember(callId: string, note: PendingNote): void
-  take(callId: string): PendingNote | undefined
-  clear(): void
+  remember(callId: string, notes: readonly PendingNote[]): void;
+  take(callId: string): PendingNote[] | undefined;
+  clear(): void;
 }
 
 export function createPendingNotes(): PendingNotes {
-  const entries = new Map<string, PendingNote>()
+  const entries = new Map<string, PendingNote[]>();
 
-  function remember(callId: string, note: PendingNote): void {
-    entries.set(callId, note)
+  function remember(callId: string, notes: readonly PendingNote[]): void {
+    entries.set(callId, [...notes]);
   }
 
-  function take(callId: string): PendingNote | undefined {
-    const note = entries.get(callId)
-    entries.delete(callId)
-    return note
+  function take(callId: string): PendingNote[] | undefined {
+    const entry = entries.get(callId);
+    entries.delete(callId);
+    return entry;
   }
 
   function clear(): void {
-    entries.clear()
+    entries.clear();
   }
 
-  return { remember, take, clear }
+  return { remember, take, clear };
 }

@@ -4,6 +4,11 @@
     "lib": ["ES2022"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/index.js": ["index.ts"]
+    },
     "strict": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
@@ -13,5 +18,5 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["index.ts", "src/**/*.ts", "test/**/*.ts"]
+  "include": ["index.ts", "index.test.ts", "src/**/*.ts"]
 }

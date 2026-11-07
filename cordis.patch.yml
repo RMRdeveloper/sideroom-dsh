@@ -9,12 +9,14 @@
           enabled: true
           blocking:
             - braced-conditionals
+            - explicit-any
             - swallowed-errors
           notes:
             - clear-names
             - stale-comments
             - commented-code
             - debug-artifacts
+            - suppressed-type-errors
           degradeAfter: 3
           resetAfter: 5
         review:

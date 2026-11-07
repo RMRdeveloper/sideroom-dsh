@@ -1,5 +1,7 @@
 node_modules/
-lib/test/
+lib/**/*.test.js
+reports/
+.stryker-tmp/
 *.tsbuildinfo
 .DS_Store
 *.tgz

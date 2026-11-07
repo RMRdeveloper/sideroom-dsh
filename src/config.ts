@@ -1,46 +1,46 @@
-import { RULE_IDS, type RuleId, type RulePolicy } from './rules/types.js'
+import { RULE_IDS, type RuleId, type RulePolicy } from '@/rules/types.js';
 
 export interface GuidelinesSettings {
-  enabled: boolean
-  gateUnrecognized: boolean
+  enabled: boolean;
+  gateUnrecognized: boolean;
 }
 
 export interface RulesSettings extends RulePolicy {
-  enabled: boolean
+  enabled: boolean;
 }
 
 export interface ReviewSettings {
-  enabled: boolean
+  enabled: boolean;
 }
 
 export interface PromptSettings {
-  contract: boolean
-  explain: boolean
+  contract: boolean;
+  explain: boolean;
 }
 
 export interface ChecksSettings {
-  enabled: boolean
+  enabled: boolean;
 }
 
 export interface SkillsSettings {
-  enabled: boolean
-  packaged: boolean
-  monorepo: boolean
-  maxDepth: number
+  enabled: boolean;
+  packaged: boolean;
+  monorepo: boolean;
+  maxDepth: number;
 }
 
 export interface SideroomConfig {
-  guidelines: GuidelinesSettings
-  rules: RulesSettings
-  review: ReviewSettings
-  prompt: PromptSettings
-  checks: ChecksSettings
-  skills: SkillsSettings
+  guidelines: GuidelinesSettings;
+  rules: RulesSettings;
+  review: ReviewSettings;
+  prompt: PromptSettings;
+  checks: ChecksSettings;
+  skills: SkillsSettings;
 }
 
 export interface NormalizedConfig {
-  settings: SideroomConfig
-  warnings: string[]
+  settings: SideroomConfig;
+  warnings: string[];
 }
 
 const SECTION_KEYS = [
@@ -50,9 +50,9 @@ const SECTION_KEYS = [
   'prompt',
   'checks',
   'skills',
-] as const
+] as const;
 
-type SectionKey = (typeof SECTION_KEYS)[number]
+type SectionKey = (typeof SECTION_KEYS)[number];
 
 const KNOWN_KEYS: Record<SectionKey, readonly string[]> = {
   guidelines: ['enabled', 'gateUnrecognized'],
@@ -61,7 +61,7 @@ const KNOWN_KEYS: Record<SectionKey, readonly string[]> = {
   prompt: ['contract', 'explain'],
   checks: ['enabled'],
   skills: ['enabled', 'packaged', 'monorepo', 'maxDepth'],
-}
+};
 
 export const DEFAULTS: SideroomConfig = {
   guidelines: {
@@ -70,12 +70,13 @@ export const DEFAULTS: SideroomConfig = {
   },
   rules: {
     enabled: true,
-    blocking: ['braced-conditionals', 'swallowed-errors'],
+    blocking: ['braced-conditionals', 'explicit-any', 'swallowed-errors'],
     notes: [
       'clear-names',
       'stale-comments',
       'commented-code',
       'debug-artifacts',
+      'suppressed-type-errors',
     ],
     degradeAfter: 3,
     resetAfter: 5,
@@ -96,124 +97,124 @@ export const DEFAULTS: SideroomConfig = {
     monorepo: true,
     maxDepth: 3,
   },
-}
+};
 
 interface SectionReader {
-  flag(key: string, fallback: boolean): boolean
-  count(key: string, fallback: number): number
-  ruleIds(key: string, fallback: RuleId[]): RuleId[]
-  unknown(known: readonly string[]): string[]
+  flag(key: string, fallback: boolean): boolean;
+  count(key: string, fallback: number): number;
+  ruleIds(key: string, fallback: RuleId[]): RuleId[];
+  unknown(known: readonly string[]): string[];
 }
 
 function sourceObjectOf(config: unknown): Record<string, unknown> {
   if (config === undefined || config === null) {
-    return {}
+    return {};
   }
   if (typeof config !== 'object' || Array.isArray(config)) {
-    throw new Error('sideroom-dsh: the bundle config must be an object')
+    throw new Error('sideroom-dsh: the bundle config must be an object');
   }
-  return config as Record<string, unknown>
+  return config as Record<string, unknown>;
 }
 
 function sectionOf(
   source: Record<string, unknown>,
-  key: SectionKey
+  key: SectionKey,
 ): Record<string, unknown> {
-  const section = source[key]
+  const section = source[key];
   if (section === undefined || section === null) {
-    return {}
+    return {};
   }
   if (typeof section !== 'object' || Array.isArray(section)) {
-    throw new Error(`sideroom-dsh: config.${key} must be an object`)
+    throw new Error(`sideroom-dsh: config.${key} must be an object`);
   }
-  return section as Record<string, unknown>
+  return section as Record<string, unknown>;
 }
 
 function readerFor(
   source: Record<string, unknown>,
-  key: SectionKey
+  key: SectionKey,
 ): SectionReader {
-  const section = sectionOf(source, key)
-  const path = `config.${key}`
+  const section = sectionOf(source, key);
+  const path = `config.${key}`;
   return {
     flag(name: string, fallback: boolean): boolean {
-      const candidate = section[name]
+      const candidate = section[name];
       if (candidate === undefined) {
-        return fallback
+        return fallback;
       }
       if (typeof candidate !== 'boolean') {
-        throw new Error(`sideroom-dsh: ${path}.${name} must be a boolean`)
+        throw new Error(`sideroom-dsh: ${path}.${name} must be a boolean`);
       }
-      return candidate
+      return candidate;
     },
 
     count(name: string, fallback: number): number {
-      const candidate = section[name]
+      const candidate = section[name];
       if (candidate === undefined) {
-        return fallback
+        return fallback;
       }
       if (
-        typeof candidate !== 'number' ||
-        !Number.isInteger(candidate) ||
-        candidate < 0
+        typeof candidate !== 'number'
+        || !Number.isInteger(candidate)
+        || candidate < 0
       ) {
         throw new Error(
-          `sideroom-dsh: ${path}.${name} must be a non-negative integer`
-        )
+          `sideroom-dsh: ${path}.${name} must be a non-negative integer`,
+        );
       }
-      return candidate
+      return candidate;
     },
 
     ruleIds(name: string, fallback: RuleId[]): RuleId[] {
-      const candidate = section[name]
+      const candidate = section[name];
       if (candidate === undefined) {
-        return [...fallback]
+        return [...fallback];
       }
       if (!Array.isArray(candidate)) {
         throw new Error(
-          `sideroom-dsh: ${path}.${name} must be a list of rule ids`
-        )
+          `sideroom-dsh: ${path}.${name} must be a list of rule ids`,
+        );
       }
       const unknown = candidate.filter(
         (entry) =>
-          typeof entry !== 'string' || !RULE_IDS.includes(entry as RuleId)
-      )
+          typeof entry !== 'string' || !RULE_IDS.includes(entry as RuleId),
+      );
       if (unknown.length > 0) {
         throw new Error(
           `sideroom-dsh: ${path}.${name} has unknown rule ids: ${unknown
             .map((entry) => String(entry))
-            .join(', ')}`
-        )
+            .join(', ')}`,
+        );
       }
-      return candidate as RuleId[]
+      return candidate as RuleId[];
     },
 
     unknown(known: readonly string[]): string[] {
       return Object.keys(section)
         .filter((entry) => !known.includes(entry))
-        .map((entry) => `${path}.${entry} is not a known setting`)
+        .map((entry) => `${path}.${entry} is not a known setting`);
     },
-  }
+  };
 }
 
 export function normalizeConfig(config: unknown): NormalizedConfig {
-  const source = sourceObjectOf(config)
-  const warnings: string[] = []
+  const source = sourceObjectOf(config);
+  const warnings: string[] = [];
   for (const key of Object.keys(source)) {
     if (!SECTION_KEYS.includes(key as SectionKey)) {
-      warnings.push(`config.${key} is not a known section`)
+      warnings.push(`config.${key} is not a known section`);
     }
   }
 
-  const guidelines = readerFor(source, 'guidelines')
-  const rules = readerFor(source, 'rules')
-  const review = readerFor(source, 'review')
-  const prompt = readerFor(source, 'prompt')
-  const checks = readerFor(source, 'checks')
-  const skills = readerFor(source, 'skills')
+  const guidelines = readerFor(source, 'guidelines');
+  const rules = readerFor(source, 'rules');
+  const review = readerFor(source, 'review');
+  const prompt = readerFor(source, 'prompt');
+  const checks = readerFor(source, 'checks');
+  const skills = readerFor(source, 'skills');
 
   for (const key of SECTION_KEYS) {
-    warnings.push(...readerFor(source, key).unknown(KNOWN_KEYS[key]))
+    warnings.push(...readerFor(source, key).unknown(KNOWN_KEYS[key]));
   }
 
   const settings: SideroomConfig = {
@@ -221,7 +222,7 @@ export function normalizeConfig(config: unknown): NormalizedConfig {
       enabled: guidelines.flag('enabled', DEFAULTS.guidelines.enabled),
       gateUnrecognized: guidelines.flag(
         'gateUnrecognized',
-        DEFAULTS.guidelines.gateUnrecognized
+        DEFAULTS.guidelines.gateUnrecognized,
       ),
     },
     rules: {
@@ -247,15 +248,15 @@ export function normalizeConfig(config: unknown): NormalizedConfig {
       monorepo: skills.flag('monorepo', DEFAULTS.skills.monorepo),
       maxDepth: skills.count('maxDepth', DEFAULTS.skills.maxDepth),
     },
-  }
+  };
 
   for (const rule of settings.rules.blocking) {
     if (settings.rules.notes.includes(rule)) {
       warnings.push(
-        `rule "${rule}" is configured as both blocking and a note; blocking wins`
-      )
+        `rule "${rule}" is configured as both blocking and a note; blocking wins`,
+      );
     }
   }
 
-  return { settings, warnings }
+  return { settings, warnings };
 }

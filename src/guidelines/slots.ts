@@ -1,1 +1,1 @@
-export const CONTRACT_SLOT = 'contract'
+export const CONTRACT_SLOT = 'contract';
