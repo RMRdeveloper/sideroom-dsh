@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- 5ae6d64: Split the architecture review into `sideroom-codebase-design` (vocabulary) and
+  `sideroom-improve-architecture` (finder), move the deepening and design-it-twice techniques into references,
+  and rewrite every skill for a shorter pointer, one owner per rule, and no harness mechanics in the body.
+
+### Patch Changes
+
+- 5ae6d64: Keep the Matt Pocock attribution in `README.md` alone: drop `NOTICE` and the per-skill `LICENSE.txt` files,
+  and rename the root `LICENSE` to `LICENSE.txt`.
+
 ## 0.2.0
 
 ### Minor Changes
