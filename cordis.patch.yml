@@ -1,6 +1,6 @@
 - insert:
     - id: sideroom
-      name: 'sideroom-dsh'
+      name: '@rmrdeveloper/sideroom-dsh'
       config:
         guidelines:
           enabled: true

@@ -1,7 +1,6 @@
 {
-  "name": "sideroom-dsh",
+  "name": "@rmrdeveloper/sideroom-dsh",
   "version": "0.1.0",
-  "private": true,
   "description": "Quality layer for DeepSeek Harness: guidelines gate, mechanical rule checks, and an end-of-edit review prompt.",
   "type": "module",
   "license": "MIT",
@@ -13,40 +12,71 @@
   "bugs": {
     "url": "https://github.com/RMRdeveloper/sideroom-dsh/issues"
   },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-bundle",
+    "dsh-plugin",
+    "coding-agent",
+    "guidelines",
+    "code-quality",
+    "guardrails",
+    "rules",
+    "review",
+    "skills"
+  ],
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
     "./locale/*.json": "./locale/*.json",
-    "./icon": "./icon.svg"
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
   },
   "files": [
     "lib/**/*.js",
     "!lib/test/**",
     "cordis.patch.yml",
-    "assets/**/*.md",
+    "assets/**",
     "locale/*.json",
     "icon.svg",
-    "NOTICE"
+    "NOTICE",
+    "docs/**/*.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test lib/test/*.test.js"
+    "test": "npm run build && node --test lib/test/*.test.js",
+    "check": "npm run test && npm run check:pack",
+    "check:pack": "node scripts/check-pack.mjs",
+    "changeset": "changeset",
+    "changeset:status": "changeset status",
+    "version-packages": "changeset version",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "dsh": ">=0.2.2-rc.1 <0.3.0-0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.2",
     "@deepseek-ai/cordis": "~4.1.0",
     "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
     "@deepseek-ai/dsh-skill": "0.2.2-rc.1",
     "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.1",
     "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
     "@types/node": "^22.20.5",
+    "js-yaml": "^4.1.0",
+    "semver": "^7.7.2",
     "typescript": "~5.9.3"
-  },
-  "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    }
   }
 }

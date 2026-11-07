@@ -7,6 +7,8 @@ The agent has to load the coding rules before it edits, the lines it adds are ch
 turn cannot end silently after a mutation: it gets one review request that names the loaded guide and the
 project checks.
 
+Published as [`@rmrdeveloper/sideroom-dsh`](https://www.npmjs.com/package/@rmrdeveloper/sideroom-dsh).
+
 ## Status
 
 Host-side port. Working today:
@@ -52,20 +54,28 @@ asking for a rerun.
 
 ## Install
 
-Requires DeepSeek Harness `0.2.2-rc.1` (tested). From git:
+Requires DeepSeek Harness `0.2.2-rc.1` or a later `0.2.x` release. The manifest declares
+`engines.dsh` as `>=0.2.2-rc.1 <0.3.0-0`, so the Harness refuses the bundle on a version it was not built
+against instead of loading it half-broken.
+
+### From the app
+
+**Plugins → Add plugin**, paste `@rmrdeveloper/sideroom-dsh`, then **Install**. Switch the bundle on if it
+stays off (**Enable now**). The Plugin manager writes the profile dependency and the bundle selection for
+you; with HMR the bundle loads without a restart.
+
+### From the CLI
+
+For a profile the `dsh` CLI owns (`web`, `headless`, or a custom profile):
 
 ```bash
-# web profile
-dsh plugin --profile web add github:RMRdeveloper/sideroom-dsh
-
-# desktop profile
-dsh plugin --profile desktop add github:RMRdeveloper/sideroom-dsh
+dsh plugin --profile web add @rmrdeveloper/sideroom-dsh
 ```
 
-Use the profile you actually run: `web` for the browser, `desktop` for the desktop app.
-
-Then add `sideroom-dsh` to `dsh.profile.bundles` in that profile's `package.json` and restart the profile.
-The in-app Plugin manager does both steps for you.
+`dsh plugin add` forwards to pnpm in that profile. Select the bundle afterwards — from the Plugins page, or
+by adding `@rmrdeveloper/sideroom-dsh` to `dsh.profile.bundles` in the profile's `package.json` — and
+restart the profile when it does not use HMR. The `desktop` profile belongs to the Desktop app, so manage
+that one from the app itself.
 
 ## Configuration
 
@@ -74,7 +84,7 @@ The bundle patch ships these defaults:
 ```yaml
 - insert:
     - id: sideroom
-      name: 'sideroom-dsh'
+      name: '@rmrdeveloper/sideroom-dsh'
       config:
         guidelines: { enabled: true, gateUnrecognized: false }
         rules:
@@ -98,11 +108,22 @@ fails the bundle at load instead of silently disabling a gate.
 npm install
 npm run build
 npm test
+npm run check
 ```
 
 `tsc` compiles `index.ts`, `src/`, and `test/` into `lib/`, and the bundle loads `lib/index.js`. `lib/` is
 committed so the plugin works from a clone without a build step; run `npm run build` before committing
 source changes.
+
+`npm run check` runs the tests and then `check:pack`, which packs the tarball the way `npm publish` would,
+asserts the file list, the patch row name, the locales, the icon and `engines.dsh`, and loads the entry
+point from the extracted tarball.
+
+## Releasing
+
+Changesets plus GitHub Actions; CI publishes through npm trusted publishing. The runbook — first manual
+publish, `npm trust`, the `npm` environment, and what to check afterwards — is in
+[`docs/publishing.md`](docs/publishing.md).
 
 ## Attribution
 

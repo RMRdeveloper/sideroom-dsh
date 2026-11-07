@@ -2,3 +2,4 @@ node_modules/
 lib/test/
 *.tsbuildinfo
 .DS_Store
+*.tgz
