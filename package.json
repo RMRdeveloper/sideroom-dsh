@@ -1,6 +1,6 @@
 {
   "name": "@rmrdeveloper/sideroom-dsh",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Quality layer for DeepSeek Harness: guidelines gate, mechanical rule checks, and an end-of-edit review prompt.",
   "type": "module",
   "license": "MIT",
