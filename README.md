@@ -144,8 +144,8 @@ npm run mutation
 ```
 
 `npm run mutation` builds and runs Stryker over the compiled `lib/` with the TAP runner and per-test
-coverage. The report lands in `reports/` (ignored), and the 100% break threshold makes the run fail while
-any mutant survives.
+coverage. The report lands in `reports/` (ignored), and the 80% break threshold fails the run when the
+mutation score drops below 80%.
 
 All internal imports use the `@/*` alias (`@/config.js`), declared in `tsconfig.json` through `baseUrl`
 and `paths`. `tsc` does not rewrite path mappings, so the build runs `tsc-alias` after `tsc`; the compiled
@@ -157,8 +157,9 @@ which is ignored and excluded from the package. `lib/` is committed so the plugi
 without a build step; run `npm run build` before committing source changes.
 
 `npm run lint` runs ESLint with the type-aware rules, `@stylistic` formatting, and `no-comments`. The
-Husky `pre-commit` hook runs `eslint --fix` through `lint-staged` on every commit, so staged `.ts` and
-`.mjs` files are fixed before the commit lands.
+Husky `pre-commit` hook chains `lint-staged`, `npm run check`, and `npm run mutation` with `&&` on every
+commit: staged `.ts` and `.mjs` files are fixed first, and the commit lands only when the type check, the
+lint, the tests, the pack check, and the mutation run all pass.
 
 `npm run check` runs the type check, the lint, the tests, and then `check:pack`, which packs the tarball
 the way `npm publish` would, asserts the file list, the patch row name, the locales, the icon and
@@ -172,5 +173,6 @@ publish, `npm trust`, the `npm` environment, and what to check afterwards — is
 
 ## Attribution
 
-MIT. Ported from [sideroom-pi](https://github.com/RMRdeveloper/sideroom-pi); [`NOTICE`](NOTICE) lists the
-assets copied from the upstream package.
+MIT. Ported from [sideroom-pi](https://github.com/RMRdeveloper/sideroom-pi). Every skill except
+`sideroom-persona` adapts one from [Matt Pocock's skills](https://github.com/mattpocock/skills)
+(MIT, Copyright (c) 2026 Matt Pocock).

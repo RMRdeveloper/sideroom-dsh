@@ -95,3 +95,23 @@ test('notesText keeps every note in order', () => {
   });
   assert.match(text, /Braced conditionals[\s\S]*Clear names/);
 });
+
+test('blockedReason joins multiple findings with a newline', () => {
+  const reason = blockedReason({
+    toolName: 'edit',
+    filePath: 'src/app.ts',
+    blocks: [BRACED, CLEAR],
+  });
+  assert.match(
+    reason,
+    /Line: `if \(!user\) return 0;`\n- \[blocked\] rule 6 Clear names/,
+  );
+});
+
+test('notesText joins multiple findings with a newline', () => {
+  const text = notesText({ notes: [BRACED, CLEAR], filePath: 'src/app.ts' });
+  assert.match(
+    text,
+    /Line: `if \(!user\) return 0;`\n- \[note\] rule 6 Clear names/,
+  );
+});

@@ -109,3 +109,12 @@ test('a missing package asset fails fast instead of returning an empty guide', (
   const brokenRoot = join(PACKAGE_ROOT, 'missing-package-root');
   assert.throws(() => createGuides(brokenRoot), /cannot read guideline asset/);
 });
+
+test('a non-string path falls back to the general language', () => {
+  assert.equal(languageOfPath(42 as unknown as string), GENERAL_LANGUAGE);
+});
+
+test('only the final extension decides the language', () => {
+  assert.equal(languageOfPath('src/app.ts.bak'), GENERAL_LANGUAGE);
+  assert.equal(languageOfPath('src/app.bak.ts'), 'typescript');
+});

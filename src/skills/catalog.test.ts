@@ -17,6 +17,8 @@ async function fixtureRoot(
   return root;
 }
 
+const USER_INVOKED_SKILL = 'sideroom-improve-architecture';
+
 test('the packaged catalog exposes every sideroom skill', () => {
   const catalog = createSkillCatalog(process.cwd());
   const names = catalog.map((skill) => skill.name).sort();
@@ -27,6 +29,7 @@ test('the packaged catalog exposes every sideroom skill', () => {
     'sideroom-domain-scaffold',
     'sideroom-grill',
     'sideroom-guidelines',
+    USER_INVOKED_SKILL,
     'sideroom-persona',
     'sideroom-user-stories',
   ]);
@@ -35,7 +38,10 @@ test('the packaged catalog exposes every sideroom skill', () => {
     assert.notEqual(skill.content, '');
     assert.equal(skill.source, 'bundled');
     assert.equal(skill.resourceBase?.kind, 'directory');
-    assert.equal(skill.invocation?.modelInvocable, true);
+    assert.equal(
+      skill.invocation?.modelInvocable,
+      skill.name !== USER_INVOKED_SKILL,
+    );
     assert.equal(skill.invocation?.userInvocable, true);
   }
 });

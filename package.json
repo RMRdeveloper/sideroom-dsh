@@ -40,7 +40,6 @@
     "assets/**",
     "locale/*.json",
     "icon.svg",
-    "NOTICE",
     "docs/**/*.md",
     "CHANGELOG.md"
   ],

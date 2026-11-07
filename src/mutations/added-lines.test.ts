@@ -39,3 +39,11 @@ test('an empty result yields no additions', () => {
   assert.deepEqual(addedLines('a\nb', ''), []);
   assert.deepEqual(addedLines('', 'a'), ['a']);
 });
+
+test('a line that matches the mutation sentinel is still an addition', () => {
+  assert.deepEqual(addedLines(null, 'Stryker was here'), ['Stryker was here']);
+});
+
+test('whitespace-only lines are never additions', () => {
+  assert.deepEqual(addedLines(null, ' \t '), []);
+});

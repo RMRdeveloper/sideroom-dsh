@@ -152,8 +152,7 @@ function verifyPackList(files) {
   const required = [
     'package.json',
     'README.md',
-    'LICENSE',
-    'NOTICE',
+    'LICENSE.txt',
     'lib/index.js',
     'lib/src/config.js',
     'cordis.patch.yml',
@@ -241,16 +240,13 @@ async function verifyExtractedEntry(tarball, workDirectory) {
     'sideroom-grill',
     'sideroom-persona',
     'sideroom-domain-scaffold',
+    'sideroom-improve-architecture',
   ]) {
     check(
       existsSync(join(assetRoot, skill, 'SKILL.md')),
       `tarball: the ${skill} skill is missing`,
     );
   }
-  check(
-    existsSync(join(assetRoot, 'sideroom-codebase-design', 'LICENSE.txt')),
-    'tarball: the redistributed skill license is missing',
-  );
   notes.push(`entry loaded from ${relative(workDirectory, packageDirectory)}`);
 }
 

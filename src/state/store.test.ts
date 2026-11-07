@@ -97,3 +97,17 @@ test('marking a review sent clears the stored cwd', () => {
   store.armReview('agent-1', '/other');
   assert.deepEqual(store.pendingReview('agent-1'), { cwd: '/other' });
 });
+
+test('state is fresh before the first turn begins', () => {
+  const store = createRunStore();
+  store.markLoaded('agent-1', 'contract');
+  assert.equal(store.isLoaded('agent-1', 'contract'), true);
+  store.beginTurn('agent-1', 1);
+  assert.equal(store.isLoaded('agent-1', 'contract'), false);
+});
+
+test('an armed review is offered before a turn begins', () => {
+  const store = createRunStore();
+  store.armReview('agent-1', '/project');
+  assert.deepEqual(store.pendingReview('agent-1'), { cwd: '/project' });
+});
