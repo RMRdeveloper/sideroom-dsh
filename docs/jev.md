@@ -77,15 +77,23 @@ check; a missing or unknown check never counts as evidence of unfinished work.
 The Web client renders a compact **Jev** chip in the conversation composer dock. The chip reports the key
 state only (configured, missing or unavailable); it never claims that Jev is enabled or healthy.
 
-Opening it shows a password field and the Host status:
+Opening it shows a two-section dialog:
 
-- **Key** — `ctx.remote.credentials.describe()` reports the source (`env` or `file`), the provider-masked
-  preview and whether the reference is writable. Saving writes the credential through
-  `ctx.remote.credentials.set()`, and removing calls `unset()`. The value travels from the browser to the
-  Host and never enters the session, the configuration or a model request.
+- **Key** — a badge reports the source: `Stored`, `Environment`, `Missing` or `Unavailable`, with the
+  provider mask when the store exposes one. While the credential is writable, the dialog offers a password
+  field with a Show/Hide toggle, `Save key` (enabled once a value is typed) and `Remove`, which asks for
+  confirmation. A successful write answers with a notice and clears the field. When the key comes from the
+  `keyEnv` environment variable the write controls are hidden: the variable wins over the store, so the
+  dialog explains it instead of offering an action that would do nothing. The same applies to a read-only
+  store (`writable: false`); when the key state cannot be read, the store error replaces the silent failure.
+  Saving writes through `ctx.remote.credentials.set()` and removing calls `unset()`. The value travels from
+  the browser to the Host and never enters the session, the configuration or a model request.
 - **Status** — opening the dialog runs `/jev status` in the current session, so the report comes from the
-  Host process. The dialog keeps the last report and refreshes on demand. When the report names another
-  `keyEnv`, the dialog switches the credential reference it reads and writes.
+  Host process. The report is rendered as labelled rows (enabled, reference, source, model, state, calls,
+  cutoff, gate and muted rules) with the hint below; a report that does not parse falls back to its raw text.
+  `Refresh` re-runs the command and reports while it waits. Without a conversation the dialog explains where
+  the status comes from instead of reporting a Host failure. When the report names another `keyEnv`, the
+  dialog switches the credential reference it reads and writes.
 
 The chip reads the `TYPESAFE_API_KEY` reference until the first status report arrives.
 
@@ -131,4 +139,5 @@ secret. Keep `enabled` off unless that trade-off is acceptable.
 - The chip does not toggle `jev.enabled`: changing an ordinary configuration field restarts the plugin, so
   the switch stays in the profile patch.
 - The status is a snapshot. A quota or rate-limit failure appears on the next refresh, not live.
+- The dialog never shows the key value: the store reports a mask, and an environment key is only named.
 - Client text is localized to English and Spanish; other locales fall back to English.

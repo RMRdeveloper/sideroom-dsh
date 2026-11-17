@@ -9,7 +9,7 @@ const STATUS_REPORT = [
   'Jev review',
   'enabled: true',
   `keyEnv: ${DEFAULT_REF}`,
-  'key: file',
+  'key: credentials',
   'model: jev-latest',
   'status: ready',
   'calls: 2',
@@ -86,6 +86,7 @@ interface Harness {
   component: unknown;
   store: Store;
   dictionaries: string[];
+  messages: Record<string, Record<string, string>>;
   slotNames: string[];
   describeCalls: string[][];
   setCalls: Array<[string, string]>;
@@ -107,6 +108,8 @@ GLOBAL_RECORD.document = { body: {} };
 
 await import(new URL('../../client.js', import.meta.url).href);
 
+let forceOpen = false;
+
 const REACT_STUB = {
   Fragment: 'Fragment',
   createElement(
@@ -124,6 +127,9 @@ const REACT_STUB = {
     return { current: value };
   },
   useState(value: unknown): [unknown, () => void] {
+    if (forceOpen && value === false) {
+      return [true, () => undefined];
+    }
     return [value, () => undefined];
   },
 };
@@ -173,6 +179,7 @@ function harnessOf({
 } = {}): Harness {
   const plugin = pluginOf();
   const dictionaries: string[] = [];
+  const messages: Record<string, Record<string, string>> = {};
   const slotNames: string[] = [];
   const describeCalls: string[][] = [];
   const setCalls: Array<[string, string]> = [];
@@ -184,8 +191,9 @@ function harnessOf({
 
   const context = {
     locale: {
-      register(_ns: string, locale: string): () => void {
+      register(_ns: string, locale: string, dictionary: Record<string, string>): () => void {
         dictionaries.push(locale);
+        messages[locale] = dictionary;
         return () => undefined;
       },
     },
@@ -245,6 +253,7 @@ function harnessOf({
     component,
     store: face.jev,
     dictionaries,
+    messages,
     slotNames,
     describeCalls,
     setCalls,
@@ -428,7 +437,7 @@ function renderChip(harness: Harness): ReactElement {
 
 function chipButton(harness: Harness): ReactElement {
   const tree = renderChip(harness);
-  return tree.children[1] as ReactElement;
+  return tree.children[0] as ReactElement;
 }
 
 test('the chip title follows the key state', async () => {
@@ -460,4 +469,173 @@ test('the chip names the missing key after an empty read', async () => {
   assert.equal(button.props.title, 'chip.title.withoutKey');
   const dot = button.children[0] as ReactElement;
   assert.equal(dot.props['data-state'], 'missing');
+});
+
+type ReactNode = ReactElement | string | number | boolean | null | undefined | ReactNode[];
+
+function isReactElement(node: ReactNode): node is ReactElement {
+  return typeof node === 'object' && node !== null && 'type' in node;
+}
+
+function childrenOf(element: ReactElement): ReactNode[] {
+  return element.children as ReactNode[];
+}
+
+function flattenNodes(node: ReactNode, collected: ReactElement[] = []): ReactElement[] {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return collected;
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      flattenNodes(child, collected);
+    }
+    return collected;
+  }
+  if (typeof node === 'string' || typeof node === 'number') {
+    return collected;
+  }
+  if (!isReactElement(node)) {
+    return collected;
+  }
+  if (typeof node.type === 'function') {
+    const render = node.type as (props: Record<string, unknown>) => ReactNode;
+    return flattenNodes(render(node.props), collected);
+  }
+  collected.push(node);
+  for (const child of childrenOf(node)) {
+    flattenNodes(child, collected);
+  }
+  return collected;
+}
+
+function nodesWithClass(nodes: ReactElement[], className: string): ReactElement[] {
+  return nodes.filter((node) => {
+    const value = node.props.className;
+    if (typeof value !== 'string') {
+      return false;
+    }
+    return value.split(' ').includes(className);
+  });
+}
+
+function textOf(nodes: ReactElement[]): string {
+  const parts: string[] = [];
+  for (const node of nodes) {
+    for (const child of childrenOf(node)) {
+      if (typeof child === 'string') {
+        parts.push(child);
+      }
+    }
+  }
+  return parts.join(' ');
+}
+
+function translatorOf(
+  harness: Harness,
+  locale: string,
+): (key: string, params?: Record<string, string>) => string {
+  return (key, params) => {
+    const dictionary = harness.messages[locale] ?? {};
+    let text = dictionary[key] ?? key;
+    for (const [name, value] of Object.entries(params ?? {})) {
+      text = text.replaceAll(`{${name}}`, value);
+    }
+    return text;
+  };
+}
+
+function openDialogOf(harness: Harness, sessionId: string | undefined = SESSION_ID): ReactElement {
+  forceOpen = true;
+  const chip = harness.component as (props: Record<string, unknown>) => ReactElement;
+  const tree = chip({
+    t: translatorOf(harness, 'en'),
+    sessionId,
+    useJevState: () => harness.store.getSnapshot(),
+    jev: harness.store,
+  });
+  forceOpen = false;
+  const dialog = tree.children.find((child) => {
+    const element = child as ReactNode;
+    return isReactElement(element) && typeof element.type === 'function';
+  }) as ReactElement | undefined;
+  assert.ok(dialog !== undefined, 'the open chip renders no dialog');
+  const render = dialog.type as (props: Record<string, unknown>) => ReactElement;
+  return render({ ...dialog.props });
+}
+
+test('the dialog hides the write controls when the environment owns the key', async () => {
+  const harness = harnessOf({
+    describe: () =>
+      Promise.resolve({
+        ok: true,
+        value: {
+          [DEFAULT_REF]: { configured: true, source: 'env', writable: true },
+        },
+      } satisfies RemoteAnswer),
+  });
+  await harness.store.refresh();
+  const nodes = flattenNodes(openDialogOf(harness));
+  assert.equal(nodesWithClass(nodes, 'sdjev-input').length, 0);
+  assert.equal(nodesWithClass(nodes, 'sdjev-button-primary').length, 0);
+  assert.match(textOf(nodes), /environment variable wins/u);
+});
+
+test('a missing key renders the input with a disabled save', async () => {
+  const harness = harnessOf({
+    describe: () =>
+      Promise.resolve({
+        ok: true,
+        value: {
+          [DEFAULT_REF]: { configured: false, writable: true },
+        },
+      } satisfies RemoteAnswer),
+  });
+  await harness.store.refresh();
+  const nodes = flattenNodes(openDialogOf(harness));
+  assert.equal(nodesWithClass(nodes, 'sdjev-input').length, 1);
+  const [save] = nodesWithClass(nodes, 'sdjev-button-primary');
+  assert.ok(save !== undefined);
+  assert.equal(save.props.disabled, true);
+});
+
+test('a status report renders labelled rows instead of the raw block', async () => {
+  const harness = harnessOf();
+  await harness.store.loadStatus(SESSION_ID);
+  const nodes = flattenNodes(openDialogOf(harness));
+  assert.equal(nodesWithClass(nodes, 'sdjev-status').length, 0);
+  assert.equal(nodesWithClass(nodes, 'sdjev-fields').length, 1);
+  const text = textOf(nodes);
+  assert.match(text, /Source/u);
+  assert.match(text, /Stored/u);
+  assert.match(text, /Ready/u);
+});
+
+test('an unparsed status report falls back to the raw block', async () => {
+  const harness = harnessOf({
+    execute: () =>
+      Promise.resolve({
+        ok: true,
+        value: { commandId: 'c-1', result: { kind: 'success', text: 'not a report' } },
+      } satisfies RemoteAnswer),
+  });
+  await harness.store.loadStatus(SESSION_ID);
+  const nodes = flattenNodes(openDialogOf(harness));
+  assert.equal(nodesWithClass(nodes, 'sdjev-status').length, 1);
+});
+
+test('a failed status carries the transport message', async () => {
+  const harness = harnessOf({
+    execute: () => Promise.resolve({ ok: false, error: { message: 'no agent' } }),
+  });
+  await harness.store.loadStatus(SESSION_ID);
+  const text = textOf(flattenNodes(openDialogOf(harness)));
+  assert.match(text, /did not answer the status command/u);
+  assert.match(text, /no agent/u);
+});
+
+test('a session without a conversation explains where the status comes from', async () => {
+  const harness = harnessOf();
+  await harness.store.loadStatus(undefined);
+  const text = textOf(flattenNodes(openDialogOf(harness, undefined)));
+  assert.match(text, /Send a message, then refresh/u);
 });

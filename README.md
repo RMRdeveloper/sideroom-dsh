@@ -24,9 +24,7 @@ Host-side port. Working today:
 
 Not ported yet: the TUI board, the edited-files strip, `sideroom_ask`, the browser companion,
 `sideroom_research`, and the active half of persona (`sideroom_persona`, the always-on reminder and the
-prose and artifact enforcement). The persona guide itself is packaged and registered as a skill. Jev is
-ported without its client status chip and masked key capture, so the key comes from the environment or
-the profile's credential store.
+prose and artifact enforcement). The persona guide itself is packaged and registered as a skill.
 
 ## How it behaves
 
@@ -87,9 +85,10 @@ the end-of-turn review, the plan result, the questionnaire result or the todo re
 configuration, privacy and limits are in [`docs/jev.md`](docs/jev.md).
 
 The Web client adds a compact **Jev** chip below the composer. It reports the key state, captures a key
-through a masked field into the profile's credential store, and shows the Host status on demand;
-`/jev status` prints the same report from any client. The key never enters the session or the configuration
-file.
+through a masked field into the profile's credential store, and shows the Host status on demand. The key
+panel names the source, hides the write controls while the environment wins, confirms a removal and reports
+the result; the status panel renders `/jev status` as labelled rows. `/jev status` prints the same report
+from any client. The key never enters the session or the configuration file.
 
 ## Install
 
