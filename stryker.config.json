@@ -5,7 +5,9 @@
   "mutate": [
     "lib/index.js",
     "lib/src/**/*.js",
-    "!lib/**/*.test.js"
+    "!lib/**/*.test.js",
+    "!lib/src/jev/questions.js",
+    "!lib/src/jev/patterns.js"
   ],
   "ignorePatterns": [
     "docs/**",

@@ -9,6 +9,11 @@ export interface CheckStatus {
   green: boolean;
 }
 
+export interface CheckOutcome {
+  command: string | null;
+  status: 'passed' | 'failed' | 'unknown';
+}
+
 export interface ShellStart {
   agentId: string;
   callId: string;
@@ -30,12 +35,14 @@ export interface CheckTracker {
   observeShell(observation: ShellObservation): void;
   refresh(agentId: string, cwd: string): Promise<void>;
   statusOf(agentId: string, cwd: string): CheckStatus;
+  outcomeOf(agentId: string, cwd: string): CheckOutcome;
 }
 
 interface DirectoryCheck {
   command: string | null;
   green: boolean;
   version: number;
+  outcome: 'passed' | 'failed' | undefined;
 }
 
 interface StartedCheck {
@@ -58,7 +65,7 @@ export function createCheckTracker(): CheckTracker {
     }
     let state = byDirectory.get(cwd);
     if (state === undefined) {
-      state = { command: null, green: false, version: 0 };
+      state = { command: null, green: false, version: 0, outcome: undefined };
       byDirectory.set(cwd, state);
     }
     return state;
@@ -105,6 +112,7 @@ export function createCheckTracker(): CheckTracker {
   function observeMutation(agentId: string, cwd: string): void {
     const state = directoryFor(agentId, cwd);
     state.green = false;
+    state.outcome = undefined;
     state.version += 1;
     commands.clear();
   }
@@ -128,6 +136,7 @@ export function createCheckTracker(): CheckTracker {
       return;
     }
     state.green = succeeded;
+    state.outcome = succeeded ? 'passed' : 'failed';
   }
 
   async function refresh(agentId: string, cwd: string): Promise<void> {
@@ -150,6 +159,14 @@ export function createCheckTracker(): CheckTracker {
     return { command: state.command, green: state.green };
   }
 
+  function outcomeOf(agentId: string, cwd: string): CheckOutcome {
+    const state = directories.get(agentId)?.get(cwd);
+    if (state === undefined) {
+      return { command: null, status: 'unknown' };
+    }
+    return { command: state.command, status: state.outcome ?? 'unknown' };
+  }
+
   return {
     beginTurn,
     startShell,
@@ -157,5 +174,6 @@ export function createCheckTracker(): CheckTracker {
     observeShell,
     refresh,
     statusOf,
+    outcomeOf,
   };
 }

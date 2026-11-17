@@ -43,3 +43,19 @@ test('the review message is a steering user message with its own source', () => 
   assert.equal(Object.isFrozen(message), true);
   assert.equal(Object.isFrozen(message.content), true);
 });
+
+test('the review carries the Jev notes after the check line', () => {
+  assert.equal(
+    reviewText({ command: 'pnpm check', green: false }, 'Sideroom Jev review'),
+    `${BASE}
+
+Detected check command: \`pnpm check\`.
+
+Sideroom Jev review`,
+  );
+});
+
+test('the review omits an empty Jev block', () => {
+  assert.equal(reviewText({ command: null, green: false }, ''), BASE);
+  assert.equal(reviewText({ command: null, green: false }), BASE);
+});

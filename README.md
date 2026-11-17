@@ -20,10 +20,13 @@ Host-side port. Working today:
 | Review          | one request at turn end, after a successful mutation, carrying the checks status                                    |
 | Checks          | detects the project command, confirms the exact command in its own directory, feeds the review                      |
 | Skills          | packaged sideroom skills plus an optional monorepo scan                                                             |
+| Jev review      | advisory notes from TypeSafe's classifier over changed code, plans, questionnaires and completed tasks; off without a key |
 
-Not ported yet: the TUI board, the edited-files strip, `sideroom_ask`, `jev`, the browser companion,
+Not ported yet: the TUI board, the edited-files strip, `sideroom_ask`, the browser companion,
 `sideroom_research`, and the active half of persona (`sideroom_persona`, the always-on reminder and the
-prose and artifact enforcement). The persona guide itself is packaged and registered as a skill.
+prose and artifact enforcement). The persona guide itself is packaged and registered as a skill. Jev is
+ported without its client status chip and masked key capture, so the key comes from the environment or
+the profile's credential store.
 
 ## How it behaves
 
@@ -75,6 +78,13 @@ A result turns green only when the shell text matches the detected command exact
 horizontal whitespace, in that directory, and the command started after the latest mutation there. Extra
 arguments, `cd other && ...`, newlines, and joined commands are not confirmed. A failed rerun clears green,
 and a mutation invalidates it. State is kept per directory; a new turn forgets it.
+
+### Jev review
+
+An optional pass from TypeSafe's classifier over the rules that no mechanical check can decide. It is off
+by default, makes no request without a key, never blocks, and never enters the system prompt: notes ride
+the end-of-turn review, the plan result, the questionnaire result or the todo result. The contract,
+configuration, privacy and limits are in [`docs/jev.md`](docs/jev.md).
 
 ## Install
 
