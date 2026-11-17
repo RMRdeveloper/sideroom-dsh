@@ -72,6 +72,34 @@ deduplicated per turn and delivered once:
 Task notes are requested only when a newly completed item meets an observed failed
 check; a missing or unknown check never counts as evidence of unfinished work.
 
+## Client controls
+
+The Web client renders a compact **Jev** chip in the conversation composer dock. The chip reports the key
+state only (configured, missing or unavailable); it never claims that Jev is enabled or healthy.
+
+Opening it shows a password field and the Host status:
+
+- **Key** — `ctx.remote.credentials.describe()` reports the source (`env` or `file`), the provider-masked
+  preview and whether the reference is writable. Saving writes the credential through
+  `ctx.remote.credentials.set()`, and removing calls `unset()`. The value travels from the browser to the
+  Host and never enters the session, the configuration or a model request.
+- **Status** — opening the dialog runs `/jev status` in the current session, so the report comes from the
+  Host process. The dialog keeps the last report and refreshes on demand. When the report names another
+  `keyEnv`, the dialog switches the credential reference it reads and writes.
+
+The chip reads the `TYPESAFE_API_KEY` reference until the first status report arrives.
+
+## `/jev` command
+
+| Invocation | Answer |
+| --- | --- |
+| `/jev` or `/jev status` | configuration, key source, model, guard state, call count and muted rules |
+| `/jev help` | usage |
+
+The report is line-oriented: `enabled:`, `keyEnv:`, `key:`, `model:`, `status:`, `calls:`, `cutoff:`,
+`gate:` and `muted:`, plus a hint when the integration is off or has no key. It never includes the key
+value. Each invocation is recorded in the session log like any other command.
+
 ## Failure policy
 
 Any of these leaves the turn untouched: a request timeout, a network error, three
@@ -98,8 +126,9 @@ Changing code sends source to a third-party API. Sensitive-named, hidden and ign
 paths are excluded from related source, but a normal source file can still contain a
 secret. Keep `enabled` off unless that trade-off is acceptable.
 
-## Not implemented yet
+## Client limits
 
-The client-side status chip and masked key capture (the Pi footer and `F10` screen) are
-not ported. Until then the key comes from the environment or the credential store, and
-the request counters are available only through the plugin's own metrics.
+- The chip does not toggle `jev.enabled`: changing an ordinary configuration field restarts the plugin, so
+  the switch stays in the profile patch.
+- The status is a snapshot. A quota or rate-limit failure appears on the next refresh, not live.
+- Client text is localized to English and Spanish; other locales fall back to English.

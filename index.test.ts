@@ -24,6 +24,26 @@ interface HarnessOptions {
   services?: Record<string, unknown>;
 }
 
+interface CommandAnswer {
+  kind: 'success' | 'error';
+  text: string;
+}
+
+interface CommandDefinitionProbe {
+  name: string;
+  description: string;
+  input: { hint: string };
+  handler(invocation: { rawInput: string }): Promise<CommandAnswer>;
+}
+
+interface CommandsProbe {
+  service: {
+    register(definition: CommandDefinitionProbe): () => void;
+  };
+  registered: string[];
+  definition: CommandDefinitionProbe | undefined;
+}
+
 interface SkillsProbe {
   service: {
     register(skill: { name: string }): () => void;
@@ -69,6 +89,21 @@ const SHELL_EXEC = {
   agent: { id: AGENT_ID, session: SESSION },
 };
 
+function createCommandsProbe(): CommandsProbe {
+  const probe: CommandsProbe = {
+    service: {
+      register: (definition) => {
+        probe.registered.push(definition.name);
+        probe.definition = definition;
+        return () => undefined;
+      },
+    },
+    registered: [],
+    definition: undefined,
+  };
+  return probe;
+}
+
 function createSkillsProbe(): SkillsProbe {
   const probe: SkillsProbe = {
     service: {
@@ -101,6 +136,15 @@ function createHarness({ services }: HarnessOptions = {}): Harness {
       return () => undefined;
     },
     get: (service: string) => services?.[service],
+    inject: (dependencies: string[], callback: (injected: unknown) => void) => {
+      const available = dependencies.every(
+        (dependency) => services?.[dependency] !== undefined,
+      );
+      if (available) {
+        callback(context);
+      }
+      return undefined;
+    },
     tools: {
       register: (definition: RegisteredTool) => {
         tools.set(definition.name, definition);
@@ -1224,5 +1268,56 @@ test('a failed check with a completion claim gets a task note', async () => {
     }
   } finally {
     rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('the Jev status command reports the guard state and the key source', async () => {
+  const probe = createCommandsProbe();
+  const harness = createHarness({ services: { commands: probe.service } });
+  const restoreKey = withApiKey('test-key');
+  try {
+    await apply(harness.context, { jev: { enabled: true } });
+    assert.deepEqual(probe.registered, ['jev']);
+    const definition = probe.definition;
+    assert.ok(definition !== undefined);
+    const answer = await definition.handler({ rawInput: '' });
+    assert.equal(answer.kind, 'success');
+    assert.match(answer.text, /^enabled: true$/mu);
+    assert.match(answer.text, /^key: environment$/mu);
+    assert.match(answer.text, /^status: ready$/mu);
+    assert.match(answer.text, /^calls: 0$/mu);
+  } finally {
+    restoreKey();
+  }
+});
+
+test('the Jev command help lists the verbs', async () => {
+  const probe = createCommandsProbe();
+  const harness = createHarness({ services: { commands: probe.service } });
+  await apply(harness.context, { jev: { enabled: false } });
+  const definition = probe.definition;
+  assert.ok(definition !== undefined);
+  const answer = await definition.handler({ rawInput: 'help' });
+  assert.equal(answer.kind, 'success');
+  assert.match(answer.text, /^\/jev status/mu);
+});
+
+test('a command name collision leaves the plugin loaded', async () => {
+  const harness = createHarness({
+    services: {
+      commands: {
+        register: () => {
+          throw new Error('command "jev" is already registered');
+        },
+      },
+    },
+  });
+  const warnings = captureWarnings();
+  try {
+    await apply(harness.context, {});
+    assert.match(String(warnings.messages[0]), /already registered/u);
+    assert.ok(harness.tools.get(GUIDELINES_TOOL) !== undefined);
+  } finally {
+    warnings.restore();
   }
 });

@@ -69,6 +69,19 @@ export default defineConfig(
     },
   },
   {
+    files: ['client.js'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+      sourceType: 'script',
+    },
+    linterOptions: {
+      noInlineConfig: true,
+    },
+  },
+  {
     files: ['**/*.mjs'],
     extends: [js.configs.recommended],
     languageOptions: {
@@ -82,7 +95,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['**/*.{ts,mjs}'],
+    files: ['**/*.{ts,mjs}', 'client.js'],
     plugins: {
       ...style.plugins,
       'no-comments': noComments,

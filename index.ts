@@ -29,6 +29,7 @@ import {
 import { createGuides } from '@/guidelines/guides.js';
 import { createGuidelinesTool } from '@/guidelines/tool.js';
 import { createFetchTransport } from '@/jev/client.js';
+import { createJevCommand, type JevCommandDefinition } from '@/jev/command.js';
 import {
   createRelatedSource,
   type RelatedFileSystem,
@@ -71,6 +72,10 @@ interface SkillsService {
   registerProvider(
     create: (control: SkillProviderControl) => SkillProvider
   ): () => void;
+}
+
+interface CommandsService {
+  register(definition: JevCommandDefinition): () => void;
 }
 
 interface TextBlock {
@@ -133,6 +138,7 @@ export function apply(ctx: Context, config: unknown): Promise<void> {
   }
 
   registerSkills();
+  registerCommand();
 
   ctx.on('agent/pre-step', (payload, next) => {
     if (payload?.agent !== undefined) {
@@ -377,6 +383,27 @@ export function apply(ctx: Context, config: unknown): Promise<void> {
         ),
       );
     }
+  }
+
+  function registerCommand(): void {
+    ctx.inject(['commands'], (commandContext: Context) => {
+      const commands = commandContext.get('commands') as
+        | CommandsService
+        | undefined;
+      if (commands === undefined) {
+        return;
+      }
+      commandContext.effect(() => {
+        try {
+          return commands.register(
+            createJevCommand({ report: () => jev.report() }),
+          );
+        } catch (error) {
+          reportError(error);
+          return () => undefined;
+        }
+      });
+    });
   }
 }
 

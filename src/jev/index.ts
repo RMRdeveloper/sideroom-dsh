@@ -37,15 +37,14 @@ import {
   beginTurn as beginJevTurn,
   clearSession,
   createJevState,
-  JEV_STATUS,
   registerFailure,
   registerSuccess,
   rememberNote,
   shouldCall,
   statusOf,
   takeNotes,
-  type JevStatus,
 } from '@/jev/state.js';
+import { buildJevReport, type JevReport } from '@/jev/status.js';
 import type { MutationChange } from '@/mutations/changes.js';
 import { reportError } from '@/report.js';
 
@@ -108,8 +107,8 @@ export interface Jev {
   notesFor(agentId: string): JevNote[];
   recordDelivered(agentId: string, notes: readonly JevNote[]): void;
   metrics(): JevMetricsSnapshot;
+  report(): Promise<JevReport>;
   cancel(): void;
-  status(): JevStatus;
 }
 
 export function createJev({
@@ -447,11 +446,18 @@ export function createJev({
     clearSession(state);
   }
 
-  function status(): JevStatus {
-    if (!settings.enabled) {
-      return JEV_STATUS.noKey;
-    }
-    return statusOf(state);
+  async function report(): Promise<JevReport> {
+    return buildJevReport({
+      enabled: settings.enabled,
+      keyEnv: settings.keyEnv,
+      key: await resolveKey(),
+      model: settings.model,
+      cutoff: settings.cutoff,
+      gate: settings.gate,
+      runtime: statusOf(state),
+      calls: state.calls,
+      muted: settings.calibrate ? [...metrics.muted()] : [],
+    });
   }
 
   return {
@@ -465,7 +471,7 @@ export function createJev({
     notesFor,
     recordDelivered,
     metrics: metricsSnapshot,
+    report,
     cancel,
-    status,
   };
 }

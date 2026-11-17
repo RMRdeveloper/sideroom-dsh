@@ -18,5 +18,7 @@ decide and delivers advisory notes that ride an existing result instead of an ex
   quota, a rejected key or a rate limit never touch the turn.
 - `calibrate` measures acceptance per rule and mutes a rule whose acceptance stays below
   20% after ten samples.
-- The client status chip and masked key capture are not included; the key comes from the
-  environment or the credential store.
+- The Web client gets a Jev chip in the conversation composer dock: key state, a masked
+  field that writes the key to the profile's credential store, and an on-demand status
+  report. A `/jev` command prints the same report from any client and never includes the
+  key value.

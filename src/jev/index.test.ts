@@ -12,6 +12,7 @@ import {
   type JevRequestBody,
 } from '@/jev/model.js';
 import { JEV_STATUS } from '@/jev/state.js';
+import { JEV_OFF_STATUS, NO_KEY_SOURCE } from '@/jev/status.js';
 
 const AGENT = 'agent-1';
 const APP = 'src/app.ts';
@@ -358,12 +359,24 @@ function captureWarnings(): { messages: unknown[]; restore(): void } {
   };
 }
 
-test('the status reports the guard state', async () => {
-  const probe = transportReturning(envelope({ 'would-reject': { noul: 0.9 } }));
+test('the report names the guard state, the key source and the counters', async () => {
   const disabled = createJev(
-    optionsWith({ probe, settingsOverrides: { enabled: false } }),
+    optionsWith({
+      probe: transportReturning(envelope({})),
+      settingsOverrides: { enabled: false },
+    }),
   );
-  assert.equal(disabled.status(), JEV_STATUS.noKey);
+  const off = await disabled.report();
+  assert.equal(off.enabled, false);
+  assert.equal(off.status, JEV_OFF_STATUS);
+
+  const keyless = createJev(
+    optionsWith({ probe: transportReturning(envelope({})), key: '' }),
+  );
+  const missing = await keyless.report();
+  assert.equal(missing.status, JEV_STATUS.noKey);
+  assert.equal(missing.keySource, NO_KEY_SOURCE);
+
   const jev = createJev(
     optionsWith({
       probe: {
@@ -372,12 +385,15 @@ test('the status reports the guard state', async () => {
       },
     }),
   );
-  assert.equal(jev.status(), JEV_STATUS.ready);
+  assert.equal((await jev.report()).status, JEV_STATUS.ready);
   jev.beginTurn(AGENT, 1);
   observeMutation(jev, [{ path: APP, added: ['x'] }]);
   await completeCall(jev);
   await jev.drain(50);
-  assert.equal(jev.status(), JEV_STATUS.quota);
+  const halted = await jev.report();
+  assert.equal(halted.status, JEV_STATUS.quota);
+  assert.equal(halted.keySource, 'environment');
+  assert.equal(halted.calls, 1);
 });
 
 test('drain returns immediately when the integration is disabled', async () => {
@@ -604,7 +620,7 @@ test('a transient failure shows an unavailable status', async () => {
   observeMutation(jev, [{ path: APP, added: ['x'] }]);
   await completeCall(jev);
   await jev.drain(50);
-  assert.equal(jev.status(), JEV_STATUS.unavailable);
+  assert.equal((await jev.report()).status, JEV_STATUS.unavailable);
 });
 
 test('a halted guard skips the queued review', async () => {
@@ -713,7 +729,7 @@ test('a failed plan review stays silent', async () => {
     await jev.reviewPlan({ agentId: AGENT, cwd: '/repo', plan: '# Plan' }),
     [],
   );
-  assert.equal(jev.status(), JEV_STATUS.unavailable);
+  assert.equal((await jev.report()).status, JEV_STATUS.unavailable);
 });
 
 test('a plan note is deduplicated in the turn', async () => {

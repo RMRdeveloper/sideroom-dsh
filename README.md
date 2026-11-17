@@ -86,6 +86,11 @@ by default, makes no request without a key, never blocks, and never enters the s
 the end-of-turn review, the plan result, the questionnaire result or the todo result. The contract,
 configuration, privacy and limits are in [`docs/jev.md`](docs/jev.md).
 
+The Web client adds a compact **Jev** chip below the composer. It reports the key state, captures a key
+through a masked field into the profile's credential store, and shows the Host status on demand;
+`/jev status` prints the same report from any client. The key never enters the session or the configuration
+file.
+
 ## Install
 
 Requires DeepSeek Harness `0.2.2-rc.1` or a later `0.2.x` release. The manifest declares
