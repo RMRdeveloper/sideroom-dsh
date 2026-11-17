@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+### Patch Changes
+
+- c4c9f84: Report the Jev key as `Missing` once the credential state resolves without a stored entry, instead of
+  leaving the key badge on `Reading`, and share one vocabulary between the status rows and the report tones.
+
 ## 0.5.0
 
 ### Minor Changes
