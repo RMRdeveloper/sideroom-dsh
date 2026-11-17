@@ -64,6 +64,50 @@ window.__ModuleLoader__.load({
     const NO_MUTED_RULES = 'none';
     const REPORT_FIELD_LINE = /^([a-z][a-zA-Z0-9]*):[ \t]*(.*)$/u;
     const MONO_FIELDS = new Set(['keyEnv', 'model']);
+    const REPORT_ENABLED_TRUE = 'true';
+    const REPORT_STATUS_VALUES = {
+      ready: 'ready',
+      noKey: 'noKey',
+      off: 'off',
+      quota: 'quota',
+      auth: 'auth',
+      rateLimited: 'rateLimited',
+      unavailable: 'unavailable',
+    };
+    const REPORT_LABELS = {
+      enabled: 'status.fields.enabled',
+      keyEnv: 'status.fields.keyEnv',
+      key: 'status.fields.key',
+      model: 'status.fields.model',
+      status: 'status.fields.status',
+      calls: 'status.fields.calls',
+      cutoff: 'status.fields.cutoff',
+      gate: 'status.fields.gate',
+      muted: 'status.fields.muted',
+    };
+    const REPORT_KEY_SOURCE_LABELS = {
+      environment: 'key.source.environment',
+      credentials: 'key.source.stored',
+      missing: 'key.source.missing',
+    };
+    const REPORT_STATUS_LABELS = {
+      [REPORT_STATUS_VALUES.ready]: 'status.state.ready',
+      [REPORT_STATUS_VALUES.noKey]: 'status.state.noKey',
+      [REPORT_STATUS_VALUES.off]: 'status.state.off',
+      [REPORT_STATUS_VALUES.quota]: 'status.state.quota',
+      [REPORT_STATUS_VALUES.auth]: 'status.state.auth',
+      [REPORT_STATUS_VALUES.rateLimited]: 'status.state.rateLimited',
+      [REPORT_STATUS_VALUES.unavailable]: 'status.state.unavailable',
+    };
+    const REPORT_STATUS_TONES = {
+      [REPORT_STATUS_VALUES.ready]: PILL_TONE.success,
+      [REPORT_STATUS_VALUES.noKey]: PILL_TONE.error,
+      [REPORT_STATUS_VALUES.auth]: PILL_TONE.error,
+      [REPORT_STATUS_VALUES.quota]: PILL_TONE.error,
+      [REPORT_STATUS_VALUES.unavailable]: PILL_TONE.error,
+      [REPORT_STATUS_VALUES.off]: PILL_TONE.neutral,
+      [REPORT_STATUS_VALUES.rateLimited]: PILL_TONE.neutral,
+    };
 
     const DICTIONARIES = {
       en: {
@@ -496,10 +540,10 @@ window.__ModuleLoader__.load({
       if (state.phase === STORE_PHASE.failed) {
         return { tone: PILL_TONE.error, label: t('key.source.unavailable') };
       }
-      if (state.key === undefined) {
+      if (state.phase === STORE_PHASE.loading) {
         return { tone: PILL_TONE.neutral, label: t('key.source.loading') };
       }
-      if (state.key.configured !== true) {
+      if (state.key?.configured !== true) {
         return { tone: PILL_TONE.neutral, label: t('key.source.missing') };
       }
       if (state.key.source === CREDENTIAL_SOURCE_ENVIRONMENT) {
@@ -561,44 +605,23 @@ window.__ModuleLoader__.load({
     }
 
     function reportLabelOf(t, name) {
-      const labels = {
-        enabled: 'status.fields.enabled',
-        keyEnv: 'status.fields.keyEnv',
-        key: 'status.fields.key',
-        model: 'status.fields.model',
-        status: 'status.fields.status',
-        calls: 'status.fields.calls',
-        cutoff: 'status.fields.cutoff',
-        gate: 'status.fields.gate',
-        muted: 'status.fields.muted',
-      };
-      if (!Object.hasOwn(labels, name)) {
+      if (!Object.hasOwn(REPORT_LABELS, name)) {
         return name;
       }
-      return t(labels[name]);
+      return t(REPORT_LABELS[name]);
     }
 
     function reportValueOf(t, field) {
       if (field.name === 'enabled') {
-        return field.value === 'true' ? t('status.enabled.true') : t('status.enabled.false');
+        return field.value === REPORT_ENABLED_TRUE
+          ? t('status.enabled.true')
+          : t('status.enabled.false');
       }
       if (field.name === 'key') {
-        return translateKnown(t, {
-          environment: 'key.source.environment',
-          credentials: 'key.source.stored',
-          missing: 'key.source.missing',
-        }, field.value);
+        return translateKnown(t, REPORT_KEY_SOURCE_LABELS, field.value);
       }
       if (field.name === REPORT_STATUS_FIELD) {
-        return translateKnown(t, {
-          ready: 'status.state.ready',
-          noKey: 'status.state.noKey',
-          off: 'status.state.off',
-          quota: 'status.state.quota',
-          auth: 'status.state.auth',
-          rateLimited: 'status.state.rateLimited',
-          unavailable: 'status.state.unavailable',
-        }, field.value);
+        return translateKnown(t, REPORT_STATUS_LABELS, field.value);
       }
       if (field.name === 'muted' && field.value === NO_MUTED_RULES) {
         return t('status.mutedNone');
@@ -610,13 +633,7 @@ window.__ModuleLoader__.load({
       if (field.name !== REPORT_STATUS_FIELD) {
         return PILL_TONE.neutral;
       }
-      if (field.value === 'ready') {
-        return PILL_TONE.success;
-      }
-      if (field.value === 'off' || field.value === 'rateLimited') {
-        return PILL_TONE.neutral;
-      }
-      return PILL_TONE.error;
+      return REPORT_STATUS_TONES[field.value] ?? PILL_TONE.neutral;
     }
 
     function reportRowsOf(t, fields) {
