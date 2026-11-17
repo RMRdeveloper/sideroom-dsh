@@ -481,31 +481,24 @@ function childrenOf(element: ReactElement): ReactNode[] {
   return element.children as ReactNode[];
 }
 
-function flattenNodes(node: ReactNode, collected: ReactElement[] = []): ReactElement[] {
+function flattenNodes(node: ReactNode): ReactElement[] {
   if (node === null || node === undefined || typeof node === 'boolean') {
-    return collected;
+    return [];
   }
   if (Array.isArray(node)) {
-    for (const child of node) {
-      flattenNodes(child, collected);
-    }
-    return collected;
+    return node.flatMap((child) => flattenNodes(child));
   }
   if (typeof node === 'string' || typeof node === 'number') {
-    return collected;
+    return [];
   }
   if (!isReactElement(node)) {
-    return collected;
+    return [];
   }
   if (typeof node.type === 'function') {
     const render = node.type as (props: Record<string, unknown>) => ReactNode;
-    return flattenNodes(render(node.props), collected);
+    return flattenNodes(render(node.props));
   }
-  collected.push(node);
-  for (const child of childrenOf(node)) {
-    flattenNodes(child, collected);
-  }
-  return collected;
+  return [node, ...childrenOf(node).flatMap((child) => flattenNodes(child))];
 }
 
 function nodesWithClass(nodes: ReactElement[], className: string): ReactElement[] {

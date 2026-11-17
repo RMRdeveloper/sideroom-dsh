@@ -597,7 +597,7 @@ window.__ModuleLoader__.load({
       return [...known, ...unknown];
     }
 
-    function translateKnown(t, labels, value) {
+    function translateKnown({ t, labels, value }) {
       if (!Object.hasOwn(labels, value)) {
         return value;
       }
@@ -618,10 +618,10 @@ window.__ModuleLoader__.load({
           : t('status.enabled.false');
       }
       if (field.name === 'key') {
-        return translateKnown(t, REPORT_KEY_SOURCE_LABELS, field.value);
+        return translateKnown({ t, labels: REPORT_KEY_SOURCE_LABELS, value: field.value });
       }
       if (field.name === REPORT_STATUS_FIELD) {
-        return translateKnown(t, REPORT_STATUS_LABELS, field.value);
+        return translateKnown({ t, labels: REPORT_STATUS_LABELS, value: field.value });
       }
       if (field.name === 'muted' && field.value === NO_MUTED_RULES) {
         return t('status.mutedNone');
@@ -646,8 +646,8 @@ window.__ModuleLoader__.load({
       }));
     }
 
-    function statusErrorView({ t, status, sessionId }) {
-      if (status.error === undefined && sessionId === undefined) {
+    function statusErrorView({ t, status }) {
+      if (status.error === undefined && status.sessionId === undefined) {
         return { kind: STATUS_VIEW.text, text: t('status.noSession') };
       }
       return { kind: STATUS_VIEW.error, text: t('status.failed'), detail: status.error };
@@ -655,7 +655,7 @@ window.__ModuleLoader__.load({
 
     function statusViewOf({ t, status, sessionId }) {
       if (status.phase === STORE_PHASE.failed) {
-        return statusErrorView({ t, status, sessionId: status.sessionId });
+        return statusErrorView({ t, status });
       }
       if (status.text !== undefined) {
         const parsed = parseReport(status.text);
