@@ -82,6 +82,30 @@ export async function tryReadPreviousText(
   }
 }
 
+export async function readFileText(
+  ctx: Context,
+  cwd: string,
+  filePath: string,
+): Promise<string | undefined> {
+  const service = ctx.get('fs') as FsService | undefined;
+  if (service === undefined) {
+    return undefined;
+  }
+  try {
+    const target = await service.resolve(filePath, { cwd });
+    const entry = await service.stat(target);
+    if (entry?.type !== 'file') {
+      return undefined;
+    }
+    return await service.readText(target);
+  } catch (error) {
+    if (!isMissingPathError(error)) {
+      reportError(error);
+    }
+    return undefined;
+  }
+}
+
 export async function mutationInspectionOf(
   ctx: Context,
   exec: ToolExecution,

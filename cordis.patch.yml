@@ -31,3 +31,17 @@
           packaged: true
           monorepo: true
           maxDepth: 3
+        jev:
+          enabled: false
+          keyEnv: TYPESAFE_API_KEY
+          endpoint: https://api.typesafe.ai/v1/systemone
+          model: jev-latest
+          cutoff: 0.8
+          gate: 0.6
+          maxNotes: 3
+          timeoutMs: 3000
+          maxRelatedFiles: 4
+          scanForConsumers: false
+          reviewPlans: true
+          reviewWorkflows: true
+          calibrate: false

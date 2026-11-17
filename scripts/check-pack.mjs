@@ -8,6 +8,7 @@ import {
   statSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { Script } from 'node:vm';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import yaml from 'js-yaml';
@@ -70,6 +71,50 @@ function verifyPublishSurface() {
     manifest.files?.length > 0,
     'package.json: "files" must list what ships',
   );
+}
+
+function verifyClientScript(source, label) {
+  try {
+    new Script(source);
+  } catch (error) {
+    fail(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function verifyClientSurface() {
+  const client = manifest.dsh?.client;
+  check(
+    client !== undefined,
+    'package.json: dsh.client is required so the web client serves the bundle',
+  );
+  if (client === undefined) {
+    return;
+  }
+  check(
+    client.platform === 'web',
+    'package.json: dsh.client.platform must be "web"',
+  );
+  check(
+    typeof manifest.exports?.['./client'] === 'string',
+    'package.json: exports["./client"] must name the browser bundle',
+  );
+  check(
+    Array.isArray(client.inject)
+    && client.inject.every((entry) => typeof entry === 'string'),
+    'package.json: dsh.client.inject must list package names',
+  );
+  const bundlePath = join(PACKAGE_ROOT, 'client.js');
+  if (!existsSync(bundlePath)) {
+    fail('client.js is missing; the web client bundle is declared but absent');
+    return;
+  }
+  const source = readFileSync(bundlePath, 'utf8');
+  const loaderId = /\bid:\s*'([^']+)'/.exec(source)?.[1];
+  check(
+    loaderId === manifest.name,
+    `client.js: the module loader id must be "${manifest.name}"`,
+  );
+  verifyClientScript(source, 'client.js');
 }
 
 function verifyDshRange() {
@@ -155,6 +200,7 @@ function verifyPackList(files) {
     'LICENSE.txt',
     'lib/index.js',
     'lib/src/config.js',
+    'client.js',
     'cordis.patch.yml',
     'locale/en.json',
     'locale/es.json',
@@ -247,6 +293,11 @@ async function verifyExtractedEntry(tarball, workDirectory) {
       `tarball: the ${skill} skill is missing`,
     );
   }
+  const bundle = join(packageDirectory, 'client.js');
+  check(existsSync(bundle), 'tarball: client.js is missing');
+  if (existsSync(bundle)) {
+    verifyClientScript(readFileSync(bundle, 'utf8'), 'tarball: client.js');
+  }
   notes.push(`entry loaded from ${relative(workDirectory, packageDirectory)}`);
 }
 
@@ -261,6 +312,7 @@ function verifyBundleConfig(rows) {
 const workDirectory = mkdtempSync(join(tmpdir(), 'sideroom-dsh-pack-'));
 try {
   verifyPublishSurface();
+  verifyClientSurface();
   verifyDshRange();
   const rows = verifyPatch();
   verifyBundleConfig(rows);

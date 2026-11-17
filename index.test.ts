@@ -24,6 +24,26 @@ interface HarnessOptions {
   services?: Record<string, unknown>;
 }
 
+interface CommandAnswer {
+  kind: 'success' | 'error';
+  text: string;
+}
+
+interface CommandDefinitionProbe {
+  name: string;
+  description: string;
+  input: { hint: string };
+  handler(invocation: { rawInput: string }): Promise<CommandAnswer>;
+}
+
+interface CommandsProbe {
+  service: {
+    register(definition: CommandDefinitionProbe): () => void;
+  };
+  registered: string[];
+  definition: CommandDefinitionProbe | undefined;
+}
+
 interface SkillsProbe {
   service: {
     register(skill: { name: string }): () => void;
@@ -69,6 +89,21 @@ const SHELL_EXEC = {
   agent: { id: AGENT_ID, session: SESSION },
 };
 
+function createCommandsProbe(): CommandsProbe {
+  const probe: CommandsProbe = {
+    service: {
+      register: (definition) => {
+        probe.registered.push(definition.name);
+        probe.definition = definition;
+        return () => undefined;
+      },
+    },
+    registered: [],
+    definition: undefined,
+  };
+  return probe;
+}
+
 function createSkillsProbe(): SkillsProbe {
   const probe: SkillsProbe = {
     service: {
@@ -101,6 +136,15 @@ function createHarness({ services }: HarnessOptions = {}): Harness {
       return () => undefined;
     },
     get: (service: string) => services?.[service],
+    inject: (dependencies: string[], callback: (injected: unknown) => void) => {
+      const available = dependencies.every(
+        (dependency) => services?.[dependency] !== undefined,
+      );
+      if (available) {
+        callback(context);
+      }
+      return undefined;
+    },
     tools: {
       register: (definition: RegisteredTool) => {
         tools.set(definition.name, definition);
@@ -189,6 +233,75 @@ async function armReview(harness: Harness): Promise<void> {
     Promise.resolve({ kind: 'accept' }),
   );
 }
+
+interface WritableFileSystem {
+  resolve(path: string, options?: { cwd?: string }): Promise<{ targetKey: string }>;
+  stat(): Promise<{ type: string } | undefined>;
+  readText(target: { targetKey: string }): Promise<string>;
+}
+
+function writableFileSystem(content: string): WritableFileSystem {
+  let stats = 0;
+  return {
+    resolve: (path) => Promise.resolve({ targetKey: path }),
+    stat: () => {
+      stats += 1;
+      return Promise.resolve(stats === 1 ? undefined : { type: 'file' });
+    },
+    readText: () => Promise.resolve(content),
+  };
+}
+
+interface FetchProbe {
+  calls: number;
+  bodies: string[];
+  restore(): void;
+}
+
+function stubFetch(body: string, status = 200): FetchProbe {
+  const original = globalThis.fetch;
+  const probe: FetchProbe = {
+    calls: 0,
+    bodies: [],
+    restore: () => {
+      globalThis.fetch = original;
+    },
+  };
+  globalThis.fetch = (
+    _input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> => {
+    probe.calls += 1;
+    probe.bodies.push(typeof init?.body === 'string' ? init.body : '');
+    return Promise.resolve(new Response(body, { status }));
+  };
+  return probe;
+}
+
+function withApiKey(key: string | undefined): () => void {
+  const original = process.env.TYPESAFE_API_KEY;
+  if (key === undefined) {
+    delete process.env.TYPESAFE_API_KEY;
+  } else {
+    process.env.TYPESAFE_API_KEY = key;
+  }
+  return () => {
+    if (original === undefined) {
+      delete process.env.TYPESAFE_API_KEY;
+    } else {
+      process.env.TYPESAFE_API_KEY = original;
+    }
+  };
+}
+
+const JEV_FILE_CONTENT = 'export const total = 1\n';
+const JEV_ANSWER = JSON.stringify({
+  model: 'jev-1.14.0',
+  answers: {
+    'would-reject': { noul: 0.95 },
+    'single-responsibility': { noul: 0.9 },
+  },
+});
 
 test('the bundle exports its name and injected services', () => {
   assert.equal(name, 'sideroom-dsh');
@@ -589,4 +702,622 @@ test('a failing steer is reported instead of crashing', async () => {
     warnings.restore();
   }
   assert.match(String(warnings.messages[0]), /sideroom-dsh: offline/);
+});
+
+test('a Jev note rides the review of the turn', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(JEV_ANSWER);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    await armReview(harness);
+    const steer = captureSteer();
+    await listenerFor(harness, 'agent/turn-stopping')({
+      agent: steer.agent,
+      turn: 1,
+      signal: new AbortController().signal,
+    });
+    assert.equal(probe.calls, 1);
+    assert.match(probe.bodies[0] ?? '', /export const total = 1/);
+    assert.equal(steer.messages.length, 1);
+    const message = steer.messages[0] as ReviewMessage;
+    assert.match(message.content[0].text, /Sideroom Jev review \(model jev-1\.14\.0/);
+    assert.match(
+      message.content[0].text,
+      /`src\/app\.ts` \[single-responsibility\] p=0\.90/,
+    );
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('Jev stays silent without a key', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey(undefined);
+  const probe = stubFetch(JEV_ANSWER);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    await armReview(harness);
+    const steer = captureSteer();
+    await listenerFor(harness, 'agent/turn-stopping')({
+      agent: steer.agent,
+      turn: 1,
+      signal: new AbortController().signal,
+    });
+    assert.equal(probe.calls, 0);
+    const message = steer.messages[0] as ReviewMessage;
+    assert.doesNotMatch(message.content[0].text, /Sideroom Jev review/);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a Jev gate rejection leaves the review without notes', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(
+    JSON.stringify({
+      answers: {
+        'would-reject': { noul: 0.1 },
+        'single-responsibility': { noul: 0.99 },
+      },
+    }),
+  );
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    await armReview(harness);
+    const steer = captureSteer();
+    await listenerFor(harness, 'agent/turn-stopping')({
+      agent: steer.agent,
+      turn: 1,
+      signal: new AbortController().signal,
+    });
+    assert.equal(probe.calls, 1);
+    const message = steer.messages[0] as ReviewMessage;
+    assert.doesNotMatch(message.content[0].text, /Sideroom Jev review/);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a failing Jev request does not break the review', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch('boom', 500);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    await armReview(harness);
+    const steer = captureSteer();
+    await listenerFor(harness, 'agent/turn-stopping')({
+      agent: steer.agent,
+      turn: 1,
+      signal: new AbortController().signal,
+    });
+    assert.equal(probe.calls, 1);
+    assert.equal(steer.messages.length, 1);
+    const message = steer.messages[0] as ReviewMessage;
+    assert.match(message.content[0].text, /Sideroom review/);
+    assert.doesNotMatch(message.content[0].text, /Sideroom Jev review/);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a disabled review leaves Jev off even when it is enabled', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(JEV_ANSWER);
+  try {
+    await apply(harness.context, {
+      review: { enabled: false },
+      jev: { enabled: true, timeoutMs: 200 },
+    });
+    await armReview(harness);
+    const steer = captureSteer();
+    await listenerFor(harness, 'agent/turn-stopping')({
+      agent: steer.agent,
+      turn: 1,
+      signal: new AbortController().signal,
+    });
+    assert.equal(probe.calls, 0);
+    assert.equal(steer.messages.length, 0);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a failed mutation is not sent to Jev', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(JEV_ANSWER);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    const preExecute = listenerFor(harness, 'tools/pre-execute');
+    const postExecute = listenerFor(harness, 'tools/post-execute');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    await guidelinesTool(harness).execute({ path: APP_PATH }, WRITE_EXEC);
+    await preExecute(WRITE_EXEC, () => undefined);
+    await postExecute(WRITE_EXEC, { isError: true, content: [] }, () =>
+      Promise.resolve({ kind: 'accept' }),
+    );
+    assert.equal(probe.calls, 0);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a shell call does not reach Jev', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(JEV_ANSWER);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    const preExecute = listenerFor(harness, 'tools/pre-execute');
+    const postExecute = listenerFor(harness, 'tools/post-execute');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    await preExecute(SHELL_EXEC, () => undefined);
+    await postExecute(SHELL_EXEC, { isError: false, content: [] }, () =>
+      Promise.resolve({ kind: 'accept' }),
+    );
+    assert.equal(probe.calls, 0);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('the note cap holds through the review', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(
+    JSON.stringify({
+      model: 'jev-1.14.0',
+      answers: {
+        'would-reject': { noul: 0.95 },
+        'single-responsibility': { noul: 0.9 },
+        'fail-fast': { noul: 0.85 },
+      },
+    }),
+  );
+  try {
+    await apply(harness.context, {
+      jev: { enabled: true, timeoutMs: 200, maxNotes: 1 },
+    });
+    await armReview(harness);
+    const steer = captureSteer();
+    await listenerFor(harness, 'agent/turn-stopping')({
+      agent: steer.agent,
+      turn: 1,
+      signal: new AbortController().signal,
+    });
+    const message = steer.messages[0] as ReviewMessage;
+    const lines = message.content[0].text.match(/^- `src\/app\.ts`/gmu) ?? [];
+    assert.equal(lines.length, 1);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+const PLAN_EXEC = {
+  name: 'exit_plan_mode',
+  arguments: { plan: '# Plan\n\nUpdate the total.\n' },
+  callId: 'plan-1',
+  agent: { id: AGENT_ID, session: SESSION },
+};
+
+const PLAN_ANSWER = JSON.stringify({
+  model: 'jev-1.14.0',
+  answers: {
+    'would-reject': { noul: 0.95 },
+    'plan-verification': { noul: 0.9 },
+  },
+});
+
+test('a plan note is appended to the exit result', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(PLAN_ANSWER);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    const augmented = (await listenerFor(harness, 'tools/post-execute')(
+      PLAN_EXEC,
+      { isError: false, content: [] },
+      () => Promise.resolve({ kind: 'accept' }),
+    )) as { kind: string; content?: Array<{ text: string }> };
+    assert.equal(probe.calls, 1);
+    assert.equal(augmented.kind, 'accept');
+    assert.match(
+      augmented.content?.[0]?.text ?? '',
+      /Sideroom Jev plan review/,
+    );
+    assert.match(augmented.content?.[0]?.text ?? '', /plan-verification/);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a disabled Jev leaves the plan result untouched', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(PLAN_ANSWER);
+  try {
+    await apply(harness.context, {});
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    const decision = { kind: 'accept' };
+    const returned = await listenerFor(harness, 'tools/post-execute')(
+      PLAN_EXEC,
+      { isError: false, content: [] },
+      () => Promise.resolve(decision),
+    );
+    assert.deepEqual(returned, decision);
+    assert.equal(probe.calls, 0);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a plan review failure leaves the result untouched', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch('boom', 500);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    const decision = { kind: 'accept' };
+    const returned = await listenerFor(harness, 'tools/post-execute')(
+      PLAN_EXEC,
+      { isError: false, content: [] },
+      () => Promise.resolve(decision),
+    );
+    assert.deepEqual(returned, decision);
+    assert.equal(probe.calls, 1);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a blank plan is not reviewed', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(PLAN_ANSWER);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    const blank = { ...PLAN_EXEC, arguments: { plan: '   ' } };
+    const decision = { kind: 'accept' };
+    const returned = await listenerFor(harness, 'tools/post-execute')(
+      blank,
+      { isError: false, content: [] },
+      () => Promise.resolve(decision),
+    );
+    assert.deepEqual(returned, decision);
+    assert.equal(probe.calls, 0);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('the plan review survives a disabled code review', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(PLAN_ANSWER);
+  try {
+    await apply(harness.context, {
+      review: { enabled: false },
+      jev: { enabled: true, timeoutMs: 200 },
+    });
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    const augmented = (await listenerFor(harness, 'tools/post-execute')(
+      PLAN_EXEC,
+      { isError: false, content: [] },
+      () => Promise.resolve({ kind: 'accept' }),
+    )) as { content?: Array<{ text: string }> };
+    assert.equal(probe.calls, 1);
+    assert.match(augmented.content?.[0]?.text ?? '', /Jev plan review/);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a mutation is not sent to Jev when the code review is disabled', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(JEV_ANSWER);
+  try {
+    await apply(harness.context, {
+      review: { enabled: false },
+      jev: { enabled: true, timeoutMs: 200 },
+    });
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    const preExecute = listenerFor(harness, 'tools/pre-execute');
+    const postExecute = listenerFor(harness, 'tools/post-execute');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    await guidelinesTool(harness).execute({ path: APP_PATH }, WRITE_EXEC);
+    await preExecute(WRITE_EXEC, () => undefined);
+    await postExecute(WRITE_EXEC, { isError: false, content: [] }, () =>
+      Promise.resolve({ kind: 'accept' }),
+    );
+    assert.equal(probe.calls, 0);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+const ASK_EXEC = {
+  name: 'ask_user_question',
+  arguments: {
+    questions: [
+      {
+        id: 'q1',
+        question: 'Proceed?',
+        options: [{ label: 'Yes (Recommended)' }, { label: 'No' }],
+      },
+    ],
+  },
+  callId: 'ask-1',
+  agent: { id: AGENT_ID, session: SESSION },
+};
+
+const ASK_ANSWER = JSON.stringify({
+  model: 'jev-1.14.0',
+  answers: {
+    'would-reject': { noul: 0.95 },
+    'questionnaire-bundled-decisions': { noul: 0.9 },
+  },
+});
+
+test('a questionnaire note is appended to the answer result', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch(ASK_ANSWER);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    const augmented = (await listenerFor(harness, 'tools/post-execute')(
+      ASK_EXEC,
+      { isError: false, content: [] },
+      () => Promise.resolve({ kind: 'accept' }),
+    )) as { content?: Array<{ text: string }> };
+    assert.equal(probe.calls, 1);
+    assert.match(
+      augmented.content?.[0]?.text ?? '',
+      /Jev questionnaire review/,
+    );
+    assert.match(
+      augmented.content?.[0]?.text ?? '',
+      /questionnaire-bundled-decisions/,
+    );
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a failed questionnaire review leaves the result untouched', async () => {
+  const harness = createHarness({
+    services: {
+      fs: writableFileSystem(JEV_FILE_CONTENT),
+      workingDirectory: workingDirectoryService('/repo'),
+    },
+  });
+  const restoreKey = withApiKey('test-key');
+  const probe = stubFetch('boom', 500);
+  try {
+    await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+    const preStep = listenerFor(harness, 'agent/pre-step');
+    preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+    const decision = { kind: 'accept' };
+    const returned = await listenerFor(harness, 'tools/post-execute')(
+      ASK_EXEC,
+      { isError: false, content: [] },
+      () => Promise.resolve(decision),
+    );
+    assert.deepEqual(returned, decision);
+    assert.equal(probe.calls, 1);
+  } finally {
+    probe.restore();
+    restoreKey();
+  }
+});
+
+test('a failed check with a completion claim gets a task note', async () => {
+  const directory = createCheckDirectory();
+  try {
+    const harness = createHarness({
+      services: {
+        fs: writableFileSystem(JEV_FILE_CONTENT),
+        workingDirectory: workingDirectoryService(directory),
+      },
+    });
+    const restoreKey = withApiKey('test-key');
+    const probe = stubFetch(
+      JSON.stringify({
+        model: 'jev-1.14.0',
+        answers: {
+          'would-reject': { noul: 0.95 },
+          'todo-contradicts-check': { noul: 0.9 },
+        },
+      }),
+    );
+    try {
+      await apply(harness.context, { jev: { enabled: true, timeoutMs: 200 } });
+      const preStep = listenerFor(harness, 'agent/pre-step');
+      const preExecute = listenerFor(harness, 'tools/pre-execute');
+      const postExecute = listenerFor(harness, 'tools/post-execute');
+      preStep({ agent: { id: AGENT_ID }, turn: 1 }, () => undefined);
+      const failedShell = { ...SHELL_EXEC, callId: 'shell-fail' };
+      await preExecute(failedShell, () => undefined);
+      await postExecute(failedShell, { isError: true, content: [] }, () =>
+        Promise.resolve({ kind: 'accept' }),
+      );
+      const todoExec = {
+        name: 'todo_write',
+        arguments: {
+          todos: [{ content: 'Ship it', status: 'completed' }],
+        },
+        callId: 'todo-1',
+        agent: { id: AGENT_ID, session: SESSION },
+      };
+      const augmented = (await postExecute(
+        todoExec,
+        { isError: false, content: [] },
+        () => Promise.resolve({ kind: 'accept' }),
+      )) as { content?: Array<{ text: string }> };
+      assert.equal(probe.calls, 1);
+      assert.match(augmented.content?.[0]?.text ?? '', /Jev task review/);
+    } finally {
+      probe.restore();
+      restoreKey();
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('the Jev status command reports the guard state and the key source', async () => {
+  const probe = createCommandsProbe();
+  const harness = createHarness({ services: { commands: probe.service } });
+  const restoreKey = withApiKey('test-key');
+  try {
+    await apply(harness.context, { jev: { enabled: true } });
+    assert.deepEqual(probe.registered, ['jev']);
+    const definition = probe.definition;
+    assert.ok(definition !== undefined);
+    const answer = await definition.handler({ rawInput: '' });
+    assert.equal(answer.kind, 'success');
+    assert.match(answer.text, /^enabled: true$/mu);
+    assert.match(answer.text, /^key: environment$/mu);
+    assert.match(answer.text, /^status: ready$/mu);
+    assert.match(answer.text, /^calls: 0$/mu);
+  } finally {
+    restoreKey();
+  }
+});
+
+test('the Jev command help lists the verbs', async () => {
+  const probe = createCommandsProbe();
+  const harness = createHarness({ services: { commands: probe.service } });
+  await apply(harness.context, { jev: { enabled: false } });
+  const definition = probe.definition;
+  assert.ok(definition !== undefined);
+  const answer = await definition.handler({ rawInput: 'help' });
+  assert.equal(answer.kind, 'success');
+  assert.match(answer.text, /^\/jev status/mu);
+});
+
+test('a command name collision leaves the plugin loaded', async () => {
+  const harness = createHarness({
+    services: {
+      commands: {
+        register: () => {
+          throw new Error('command "jev" is already registered');
+        },
+      },
+    },
+  });
+  const warnings = captureWarnings();
+  try {
+    await apply(harness.context, {});
+    assert.match(String(warnings.messages[0]), /already registered/u);
+    assert.ok(harness.tools.get(GUIDELINES_TOOL) !== undefined);
+  } finally {
+    warnings.restore();
+  }
 });

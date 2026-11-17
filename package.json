@@ -28,6 +28,7 @@
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
+    "./client": "./client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg",
@@ -36,6 +37,7 @@
   "files": [
     "lib/**/*.js",
     "!lib/**/*.test.js",
+    "client.js",
     "cordis.patch.yml",
     "assets/**",
     "locale/*.json",
@@ -61,7 +63,7 @@
     "prepublishOnly": "npm run check"
   },
   "lint-staged": {
-    "*.{ts,mjs}": "eslint --fix"
+    "*.{ts,mjs,js}": "eslint --fix"
   },
   "engines": {
     "node": ">=20",
@@ -73,6 +75,13 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
     }
   },
   "devDependencies": {

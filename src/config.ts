@@ -1,3 +1,9 @@
+import {
+  JEV_CUTOFF,
+  JEV_ENDPOINT,
+  JEV_GATE_CUTOFF,
+  JEV_MODEL,
+} from '@/jev/model.js';
 import { RULE_IDS, type RuleId, type RulePolicy } from '@/rules/types.js';
 
 export interface GuidelinesSettings {
@@ -29,6 +35,22 @@ export interface SkillsSettings {
   maxDepth: number;
 }
 
+export interface JevSettings {
+  enabled: boolean;
+  keyEnv: string;
+  endpoint: string;
+  model: string;
+  cutoff: number;
+  gate: number;
+  maxNotes: number;
+  timeoutMs: number;
+  maxRelatedFiles: number;
+  scanForConsumers: boolean;
+  reviewPlans: boolean;
+  reviewWorkflows: boolean;
+  calibrate: boolean;
+}
+
 export interface SideroomConfig {
   guidelines: GuidelinesSettings;
   rules: RulesSettings;
@@ -36,6 +58,7 @@ export interface SideroomConfig {
   prompt: PromptSettings;
   checks: ChecksSettings;
   skills: SkillsSettings;
+  jev: JevSettings;
 }
 
 export interface NormalizedConfig {
@@ -50,6 +73,7 @@ const SECTION_KEYS = [
   'prompt',
   'checks',
   'skills',
+  'jev',
 ] as const;
 
 type SectionKey = (typeof SECTION_KEYS)[number];
@@ -61,6 +85,21 @@ const KNOWN_KEYS: Record<SectionKey, readonly string[]> = {
   prompt: ['contract', 'explain'],
   checks: ['enabled'],
   skills: ['enabled', 'packaged', 'monorepo', 'maxDepth'],
+  jev: [
+    'enabled',
+    'keyEnv',
+    'endpoint',
+    'model',
+    'cutoff',
+    'gate',
+    'maxNotes',
+    'timeoutMs',
+    'maxRelatedFiles',
+    'scanForConsumers',
+    'reviewPlans',
+    'reviewWorkflows',
+    'calibrate',
+  ],
 };
 
 export const DEFAULTS: SideroomConfig = {
@@ -97,11 +136,29 @@ export const DEFAULTS: SideroomConfig = {
     monorepo: true,
     maxDepth: 3,
   },
+  jev: {
+    enabled: false,
+    keyEnv: 'TYPESAFE_API_KEY',
+    endpoint: JEV_ENDPOINT,
+    model: JEV_MODEL,
+    cutoff: JEV_CUTOFF,
+    gate: JEV_GATE_CUTOFF,
+    maxNotes: 3,
+    timeoutMs: 3_000,
+    maxRelatedFiles: 4,
+    scanForConsumers: false,
+    reviewPlans: true,
+    reviewWorkflows: true,
+    calibrate: false,
+  },
 };
 
 interface SectionReader {
   flag(key: string, fallback: boolean): boolean;
   count(key: string, fallback: number): number;
+  text(key: string, fallback: string): string;
+  ratio(key: string, fallback: number): number;
+  positive(key: string, fallback: number): number;
   ruleIds(key: string, fallback: RuleId[]): RuleId[];
   unknown(known: readonly string[]): string[];
 }
@@ -165,6 +222,54 @@ function readerFor(
       return candidate;
     },
 
+    text(name: string, fallback: string): string {
+      const candidate = section[name];
+      if (candidate === undefined) {
+        return fallback;
+      }
+      if (typeof candidate !== 'string' || candidate.trim() === '') {
+        throw new Error(
+          `sideroom-dsh: ${path}.${name} must be a non-empty string`,
+        );
+      }
+      return candidate.trim();
+    },
+
+    ratio(name: string, fallback: number): number {
+      const candidate = section[name];
+      if (candidate === undefined) {
+        return fallback;
+      }
+      if (
+        typeof candidate !== 'number'
+        || !Number.isFinite(candidate)
+        || candidate < 0
+        || candidate > 1
+      ) {
+        throw new Error(
+          `sideroom-dsh: ${path}.${name} must be a number between 0 and 1`,
+        );
+      }
+      return candidate;
+    },
+
+    positive(name: string, fallback: number): number {
+      const candidate = section[name];
+      if (candidate === undefined) {
+        return fallback;
+      }
+      if (
+        typeof candidate !== 'number'
+        || !Number.isInteger(candidate)
+        || candidate < 1
+      ) {
+        throw new Error(
+          `sideroom-dsh: ${path}.${name} must be a positive integer`,
+        );
+      }
+      return candidate;
+    },
+
     ruleIds(name: string, fallback: RuleId[]): RuleId[] {
       const candidate = section[name];
       if (candidate === undefined) {
@@ -212,6 +317,7 @@ export function normalizeConfig(config: unknown): NormalizedConfig {
   const prompt = readerFor(source, 'prompt');
   const checks = readerFor(source, 'checks');
   const skills = readerFor(source, 'skills');
+  const jev = readerFor(source, 'jev');
 
   for (const key of SECTION_KEYS) {
     warnings.push(...readerFor(source, key).unknown(KNOWN_KEYS[key]));
@@ -247,6 +353,30 @@ export function normalizeConfig(config: unknown): NormalizedConfig {
       packaged: skills.flag('packaged', DEFAULTS.skills.packaged),
       monorepo: skills.flag('monorepo', DEFAULTS.skills.monorepo),
       maxDepth: skills.count('maxDepth', DEFAULTS.skills.maxDepth),
+    },
+    jev: {
+      enabled: jev.flag('enabled', DEFAULTS.jev.enabled),
+      keyEnv: jev.text('keyEnv', DEFAULTS.jev.keyEnv),
+      endpoint: jev.text('endpoint', DEFAULTS.jev.endpoint),
+      model: jev.text('model', DEFAULTS.jev.model),
+      cutoff: jev.ratio('cutoff', DEFAULTS.jev.cutoff),
+      gate: jev.ratio('gate', DEFAULTS.jev.gate),
+      maxNotes: jev.count('maxNotes', DEFAULTS.jev.maxNotes),
+      timeoutMs: jev.positive('timeoutMs', DEFAULTS.jev.timeoutMs),
+      maxRelatedFiles: jev.count(
+        'maxRelatedFiles',
+        DEFAULTS.jev.maxRelatedFiles,
+      ),
+      scanForConsumers: jev.flag(
+        'scanForConsumers',
+        DEFAULTS.jev.scanForConsumers,
+      ),
+      reviewPlans: jev.flag('reviewPlans', DEFAULTS.jev.reviewPlans),
+      reviewWorkflows: jev.flag(
+        'reviewWorkflows',
+        DEFAULTS.jev.reviewWorkflows,
+      ),
+      calibrate: jev.flag('calibrate', DEFAULTS.jev.calibrate),
     },
   };
 

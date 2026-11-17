@@ -439,3 +439,54 @@ test('observeMutation creates state for an unknown directory', async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('the observed outcome distinguishes passed, failed and unknown', async () => {
+  const directory = await fixtureDirectory();
+  try {
+    const tracker = createCheckTracker();
+    tracker.beginTurn('agent', 1);
+    assert.deepEqual(tracker.outcomeOf('agent', directory), {
+      command: null,
+      status: 'unknown',
+    });
+    await tracker.startShell({
+      agentId: 'agent',
+      callId: 'c1',
+      cwd: directory,
+      commandLine: 'pnpm check',
+    });
+    tracker.observeShell({
+      agentId: 'agent',
+      callId: 'c1',
+      cwd: directory,
+      succeeded: false,
+    });
+    assert.deepEqual(tracker.outcomeOf('agent', directory), {
+      command: 'pnpm check',
+      status: 'failed',
+    });
+    tracker.observeMutation('agent', directory);
+    assert.deepEqual(tracker.outcomeOf('agent', directory), {
+      command: 'pnpm check',
+      status: 'unknown',
+    });
+    await tracker.startShell({
+      agentId: 'agent',
+      callId: 'c2',
+      cwd: directory,
+      commandLine: 'pnpm check',
+    });
+    tracker.observeShell({
+      agentId: 'agent',
+      callId: 'c2',
+      cwd: directory,
+      succeeded: true,
+    });
+    assert.deepEqual(tracker.outcomeOf('agent', directory), {
+      command: 'pnpm check',
+      status: 'passed',
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
