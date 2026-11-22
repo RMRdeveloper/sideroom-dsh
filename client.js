@@ -951,14 +951,15 @@ var jev_default = ".sideroom-jev__chip {\n  display: inline-flex;\n  align-items
 // src/client/styles/install.ts
 function installStyles() {
   const head = document.head;
-  const existing = head.querySelector(`style[${STYLE_ATTRIBUTE}]`);
-  if (existing !== null) {
-    return () => void 0;
-  }
-  const element = document.createElement("style");
+  const existing = head.querySelector(
+    `style[${STYLE_ATTRIBUTE}]`
+  );
+  const element = existing ?? document.createElement("style");
   element.setAttribute(STYLE_ATTRIBUTE, "");
   element.textContent = jev_default;
-  head.appendChild(element);
+  if (existing === null) {
+    head.appendChild(element);
+  }
   return () => {
     element.remove();
   };
@@ -979,7 +980,7 @@ function apply(ctx) {
     unset: (ref) => ctx.remote.credentials.unset(ref)
   };
   const commands = {
-    execute: (sessionId, line) => ctx.remote.commands.execute(sessionId, line)
+    execute: (sessionId, line) => ctx.remote.commands.execute(sessionId, line, [])
   };
   const store = createJevStore({ credentials, commands });
   ctx.effect(() => installStyles());
