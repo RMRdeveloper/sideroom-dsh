@@ -109,7 +109,7 @@ function verifyClientSurface() {
     return;
   }
   const source = readFileSync(bundlePath, 'utf8');
-  const loaderId = /\bid:\s*'([^']+)'/.exec(source)?.[1];
+  const loaderId = /\bid:\s*['"]([^'"]+)['"]/.exec(source)?.[1];
   check(
     loaderId === manifest.name,
     `client.js: the module loader id must be "${manifest.name}"`,

@@ -1,1213 +1,1011 @@
 window.__ModuleLoader__.load({
-  id: '@rmrdeveloper/sideroom-dsh',
+  id: "@rmrdeveloper/sideroom-dsh",
   factory(require) {
-    const React = require('react');
-    const { createPortal } = require('react-dom');
-    const { Fragment, useCallback, useEffect, useRef, useState } = React;
-    const h = React.createElement;
+    var module = { exports: {} };
+    var exports = module.exports;
+"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-    const SLOT_NAME = 'conversation.composer.dock';
-    const SLOT_ID = 'jev';
-    const CHIP_ORDER = 30;
-    const CHIP_LABEL = 'Jev';
-    const CREDENTIAL_UPDATE_EVENT = 'credentials/reference-updated';
-    const LOCALE_NAMESPACE = 'sideroom-jev';
-    const DEFAULT_KEY_ENV = 'TYPESAFE_API_KEY';
-    const KEY_ENV_LINE = /^keyEnv:[ \t]*(.+?)[ \t]*$/mu;
-    const STATUS_COMMAND = '/jev status';
-    const CREDENTIAL_SOURCE_ENVIRONMENT = 'env';
-    const CREDENTIAL_SOURCE_STORE = 'file';
-    const BUSY_SAVE = 'save';
-    const BUSY_REMOVE = 'remove';
-    const DIALOG_Z_INDEX = 1000;
-    const STYLE_MARKER = 'data-sideroom-jev';
-    const TITLE_ID = 'sdjev-dialog-title';
-    const DESCRIPTION_ID = 'sdjev-dialog-description';
-    const KEY_INPUT_ID = 'sdjev-key-input';
-    const KEY_ERROR_ID = 'sdjev-key-error';
-    const STORE_PHASE = {
-      idle: 'idle',
-      loading: 'loading',
-      ready: 'ready',
-      failed: 'failed',
-    };
-    const DOT_STATE = {
-      configured: 'configured',
-      missing: 'missing',
-      failed: 'failed',
-    };
-    const PILL_TONE = {
-      business: 'business',
-      error: 'error',
-      neutral: 'neutral',
-      success: 'success',
-    };
-    const STATUS_VIEW = {
-      report: 'report',
-      text: 'text',
-      error: 'error',
-      raw: 'raw',
-    };
-    const REPORT_FIELD_ORDER = [
-      'enabled',
-      'keyEnv',
-      'key',
-      'model',
-      'status',
-      'calls',
-      'cutoff',
-      'gate',
-      'muted',
-    ];
-    const REPORT_STATUS_FIELD = 'status';
-    const REPORT_HINT_FIELD = 'hint';
-    const NO_MUTED_RULES = 'none';
-    const REPORT_FIELD_LINE = /^([a-z][a-zA-Z0-9]*):[ \t]*(.*)$/u;
-    const MONO_FIELDS = new Set(['keyEnv', 'model']);
-    const REPORT_ENABLED_TRUE = 'true';
-    const REPORT_STATUS_VALUES = {
-      ready: 'ready',
-      noKey: 'noKey',
-      off: 'off',
-      quota: 'quota',
-      auth: 'auth',
-      rateLimited: 'rateLimited',
-      unavailable: 'unavailable',
-    };
-    const REPORT_LABELS = {
-      enabled: 'status.fields.enabled',
-      keyEnv: 'status.fields.keyEnv',
-      key: 'status.fields.key',
-      model: 'status.fields.model',
-      status: 'status.fields.status',
-      calls: 'status.fields.calls',
-      cutoff: 'status.fields.cutoff',
-      gate: 'status.fields.gate',
-      muted: 'status.fields.muted',
-    };
-    const REPORT_KEY_SOURCE_LABELS = {
-      environment: 'key.source.environment',
-      credentials: 'key.source.stored',
-      missing: 'key.source.missing',
-    };
-    const REPORT_STATUS_LABELS = {
-      [REPORT_STATUS_VALUES.ready]: 'status.state.ready',
-      [REPORT_STATUS_VALUES.noKey]: 'status.state.noKey',
-      [REPORT_STATUS_VALUES.off]: 'status.state.off',
-      [REPORT_STATUS_VALUES.quota]: 'status.state.quota',
-      [REPORT_STATUS_VALUES.auth]: 'status.state.auth',
-      [REPORT_STATUS_VALUES.rateLimited]: 'status.state.rateLimited',
-      [REPORT_STATUS_VALUES.unavailable]: 'status.state.unavailable',
-    };
-    const REPORT_STATUS_TONES = {
-      [REPORT_STATUS_VALUES.ready]: PILL_TONE.success,
-      [REPORT_STATUS_VALUES.noKey]: PILL_TONE.error,
-      [REPORT_STATUS_VALUES.auth]: PILL_TONE.error,
-      [REPORT_STATUS_VALUES.quota]: PILL_TONE.error,
-      [REPORT_STATUS_VALUES.unavailable]: PILL_TONE.error,
-      [REPORT_STATUS_VALUES.off]: PILL_TONE.neutral,
-      [REPORT_STATUS_VALUES.rateLimited]: PILL_TONE.neutral,
-    };
+// src/client/main.ts
+var main_exports = {};
+__export(main_exports, {
+  apply: () => apply,
+  inject: () => inject
+});
+module.exports = __toCommonJS(main_exports);
 
-    const DICTIONARIES = {
-      en: {
-        'chip.title.withKey': 'Jev: key configured',
-        'chip.title.withoutKey': 'Jev: no key',
-        'chip.title.unavailable': 'Jev: key state unavailable',
-        'dialog.title': 'Jev settings',
-        'dialog.description': 'API key and Host status.',
-        'dialog.close': 'Close',
-        'key.heading': 'Key',
-        'key.loading': 'Reading the key state...',
-        'key.fromEnvironment': 'Read from the environment variable {name}.',
-        'key.stored': 'Stored credential {name}.',
-        'key.storedMasked': 'Stored credential {name} ({masked}).',
-        'key.configured': 'A key is configured for {name}.',
-        'key.missing': 'No key for {name}.',
-        'key.unavailable': 'The key state could not be read.',
-        'key.unavailableDetail': 'The key state could not be read: {reason}',
-        'key.source.loading': 'Reading',
-        'key.source.stored': 'Stored',
-        'key.source.environment': 'Environment',
-        'key.source.missing': 'Missing',
-        'key.source.unavailable': 'Unavailable',
-        'key.placeholder': 'Paste the API key',
-        'key.save': 'Save key',
-        'key.saving': 'Saving...',
-        'key.remove': 'Remove',
-        'key.removing': 'Removing...',
-        'key.show': 'Show',
-        'key.hide': 'Hide',
-        'key.readOnly': 'The credential store is read-only in this profile.',
-        'key.environmentLocked':
-          'The key comes from {name}. The environment variable wins, so the stored credential is ignored while it is set.',
-        'key.privacy':
-          'The Host writes the key to the credential store; it never enters this session or the configuration.',
-        'key.saved': 'Key saved.',
-        'key.removed': 'Key removed.',
-        'key.removeConfirm': 'Remove the stored key from this profile?',
-        'key.removeConfirmAction': 'Remove key',
-        'key.cancel': 'Cancel',
-        'status.heading': 'Status',
-        'status.loading': 'Reading the Host status...',
-        'status.idle': 'Refresh to read the Host configuration.',
-        'status.noSession': 'The status comes from the conversation. Send a message, then refresh.',
-        'status.failed': 'The Host did not answer the status command.',
-        'status.refresh': 'Refresh',
-        'status.refreshing': 'Refreshing...',
-        'status.mutedNone': 'None',
-        'status.fields.enabled': 'Enabled',
-        'status.fields.keyEnv': 'Reference',
-        'status.fields.key': 'Source',
-        'status.fields.model': 'Model',
-        'status.fields.status': 'State',
-        'status.fields.calls': 'Calls',
-        'status.fields.cutoff': 'Note cutoff',
-        'status.fields.gate': 'Global gate',
-        'status.fields.muted': 'Muted',
-        'status.enabled.true': 'Yes',
-        'status.enabled.false': 'No',
-        'status.state.ready': 'Ready',
-        'status.state.noKey': 'No key',
-        'status.state.off': 'Off',
-        'status.state.quota': 'Quota exhausted',
-        'status.state.auth': 'Key rejected',
-        'status.state.rateLimited': 'Rate limited',
-        'status.state.unavailable': 'Unavailable',
-        'error.template': 'Jev could not {action}: {reason}',
-        'error.action.save': 'save the key',
-        'error.action.remove': 'remove the key',
-      },
-      es: {
-        'chip.title.withKey': 'Jev: clave configurada',
-        'chip.title.withoutKey': 'Jev: sin clave',
-        'chip.title.unavailable': 'Jev: estado de la clave no disponible',
-        'dialog.title': 'Configuración de Jev',
-        'dialog.description': 'Clave de API y estado del Host.',
-        'dialog.close': 'Cerrar',
-        'key.heading': 'Clave',
-        'key.loading': 'Leyendo el estado de la clave...',
-        'key.fromEnvironment': 'Se lee de la variable de entorno {name}.',
-        'key.stored': 'Credencial guardada {name}.',
-        'key.storedMasked': 'Credencial guardada {name} ({masked}).',
-        'key.configured': 'Hay una clave configurada para {name}.',
-        'key.missing': 'No hay clave para {name}.',
-        'key.unavailable': 'No se pudo leer el estado de la clave.',
-        'key.unavailableDetail': 'No se pudo leer el estado de la clave: {reason}',
-        'key.source.loading': 'Leyendo',
-        'key.source.stored': 'Guardada',
-        'key.source.environment': 'Entorno',
-        'key.source.missing': 'Sin clave',
-        'key.source.unavailable': 'No disponible',
-        'key.placeholder': 'Pega la clave de API',
-        'key.save': 'Guardar clave',
-        'key.saving': 'Guardando...',
-        'key.remove': 'Quitar',
-        'key.removing': 'Quitando...',
-        'key.show': 'Mostrar',
-        'key.hide': 'Ocultar',
-        'key.readOnly': 'El almacén de credenciales es de solo lectura en este perfil.',
-        'key.environmentLocked':
-          'La clave viene de {name}. La variable de entorno tiene prioridad, así que la credencial guardada se ignora mientras esté definida.',
-        'key.privacy':
-          'La clave la escribe el Host en el almacén de credenciales; nunca entra a esta sesión ni a la configuración.',
-        'key.saved': 'Clave guardada.',
-        'key.removed': 'Clave quitada.',
-        'key.removeConfirm': '¿Quitar la clave guardada de este perfil?',
-        'key.removeConfirmAction': 'Quitar clave',
-        'key.cancel': 'Cancelar',
-        'status.heading': 'Estado',
-        'status.loading': 'Leyendo el estado del Host...',
-        'status.idle': 'Actualiza para leer la configuración del Host.',
-        'status.noSession': 'El estado se lee de la conversación actual. Envía un mensaje y actualiza.',
-        'status.failed': 'El Host no respondió al comando de estado.',
-        'status.refresh': 'Actualizar',
-        'status.refreshing': 'Actualizando...',
-        'status.mutedNone': 'Ninguna',
-        'status.fields.enabled': 'Activo',
-        'status.fields.keyEnv': 'Referencia',
-        'status.fields.key': 'Origen',
-        'status.fields.model': 'Modelo',
-        'status.fields.status': 'Estado',
-        'status.fields.calls': 'Llamadas',
-        'status.fields.cutoff': 'Umbral de nota',
-        'status.fields.gate': 'Umbral global',
-        'status.fields.muted': 'Silenciadas',
-        'status.enabled.true': 'Sí',
-        'status.enabled.false': 'No',
-        'status.state.ready': 'Listo',
-        'status.state.noKey': 'Sin clave',
-        'status.state.off': 'Desactivado',
-        'status.state.quota': 'Cuota agotada',
-        'status.state.auth': 'Clave rechazada',
-        'status.state.rateLimited': 'Límite alcanzado',
-        'status.state.unavailable': 'No disponible',
-        'error.template': 'Jev no pudo {action}: {reason}',
-        'error.action.save': 'guardar la clave',
-        'error.action.remove': 'quitar la clave',
-      },
-    };
+// src/client/components/jev-chip.tsx
+var import_dsh_client_ui_primitives7 = require("@deepseek-ai/dsh-client-ui-primitives");
+var import_react3 = require("react");
 
-    const STYLE_TEXT = `
-.sdjev-chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 8px;border:0;border-radius:999px;background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:var(--dsw-font-xxs-12);line-height:1;cursor:pointer}
-.sdjev-chip:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}
-.sdjev-chip[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}
-.sdjev-chip:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}
-.sdjev-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.45}
-.sdjev-dot[data-state=${DOT_STATE.configured}]{background:var(--dsw-alias-state-business-primary);opacity:1}
-.sdjev-dot[data-state=${DOT_STATE.failed}]{background:var(--dsw-alias-state-error-primary);opacity:1}
-.sdjev-root{position:fixed;inset:0;z-index:${DIALOG_Z_INDEX};display:flex;align-items:center;justify-content:center;padding:24px}
-.sdjev-mask{position:absolute;inset:0;background:var(--dsw-alias-bg-mask-1);backdrop-filter:var(--dsw-mask-blur)}
-.sdjev-dialog{position:relative;z-index:1;box-sizing:border-box;display:flex;flex-direction:column;width:min(520px,100%);max-height:calc(100dvh - 48px);overflow:auto;border-radius:var(--dsw-radius-lg);background:var(--dsw-alias-bg-layer-2);box-shadow:var(--dsw-elevation-prominent);color:var(--dsw-alias-label-secondary);font-size:var(--dsw-font-xs-13);line-height:20px}
-.sdjev-dialog:focus{outline:none}
-.sdjev-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--dsw-alias-border-l2)}
-.sdjev-heading-group{display:flex;flex-direction:column;gap:2px;min-width:0}
-.sdjev-title{margin:0;font-size:16px;line-height:22px;font-weight:600;color:var(--dsw-alias-label-primary)}
-.sdjev-description{margin:0;font-size:12px;line-height:16px;color:var(--dsw-alias-label-tertiary)}
-.sdjev-close{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;margin:-4px -6px 0 0;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-tertiary);font-size:18px;line-height:1;cursor:pointer}
-.sdjev-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
-.sdjev-close:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:1px}
-.sdjev-body{display:flex;flex-direction:column;padding:0 20px 18px}
-.sdjev-section{display:flex;flex-direction:column;gap:10px;padding:16px 0}
-.sdjev-section+.sdjev-section{border-top:1px solid var(--dsw-alias-border-l2)}
-.sdjev-section-header{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:20px}
-.sdjev-heading{margin:0;font-size:11px;line-height:20px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dsw-alias-label-tertiary)}
-.sdjev-pill{display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 8px;border-radius:999px;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:1;font-weight:500;white-space:nowrap}
-.sdjev-pill-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.7}
-.sdjev-pill[data-tone=${PILL_TONE.business}]{color:var(--dsw-alias-state-business-primary)}
-.sdjev-pill[data-tone=${PILL_TONE.error}]{color:var(--dsw-alias-state-error-primary)}
-.sdjev-note{margin:0;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}
-.sdjev-privacy{margin:2px 0 0;color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}
-.sdjev-field{position:relative;display:flex}
-.sdjev-field[data-reveal=true] .sdjev-input{padding-right:66px}
-.sdjev-input{flex:1;min-width:0;box-sizing:border-box;height:36px;padding:0 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}
-.sdjev-input::placeholder{color:var(--dsw-alias-label-tertiary);opacity:1}
-.sdjev-input:hover:not(:disabled){border-color:var(--dsw-alias-label-tertiary)}
-.sdjev-input:focus{outline:none;border-color:var(--dsw-alias-state-business-primary);box-shadow:0 0 0 1px var(--dsw-alias-state-business-primary)}
-.sdjev-input:disabled{opacity:.55;cursor:not-allowed}
-.sdjev-reveal{position:absolute;top:50%;right:5px;transform:translateY(-50%);height:26px;padding:0 8px;border:0;border-radius:var(--dsw-radius-sm);background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:11px;font-weight:500;cursor:pointer}
-.sdjev-reveal:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}
-.sdjev-reveal:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:0}
-.sdjev-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.sdjev-button-spaced{margin-left:auto}
-.sdjev-confirm{display:flex;flex-direction:column;gap:8px}
-.sdjev-confirm-text{margin:0;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}
-.sdjev-button{display:inline-flex;align-items:center;justify-content:center;flex:none;height:32px;padding:0 14px;border:1px solid transparent;border-radius:var(--dsw-radius-md);background:var(--dsw-alias-button-info-fill);color:var(--dsw-alias-label-on-color);font:inherit;font-size:12px;font-weight:600;line-height:1;cursor:pointer;white-space:nowrap}
-.sdjev-button:hover:not(:disabled){background:var(--dsw-alias-button-info-hover)}
-.sdjev-button:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}
-.sdjev-button:disabled{border-color:var(--dsw-alias-border-l2);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary);opacity:1;cursor:default}
-.sdjev-button-quiet{border-color:var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);font-weight:500}
-.sdjev-button-quiet:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
-.sdjev-button-danger{border-color:var(--dsw-alias-state-error-primary);background:transparent;color:var(--dsw-alias-state-error-primary);font-weight:500}
-.sdjev-button-danger:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}
-.sdjev-error{margin:0;color:var(--dsw-alias-state-error-primary);font-size:12px;line-height:18px}
-.sdjev-success{margin:0;color:var(--dsw-alias-state-success-primary);font-size:12px;line-height:18px}
-.sdjev-fields{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 16px;margin:0;padding:0}
-.sdjev-field-row{display:contents}
-.sdjev-fields dt{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}
-.sdjev-fields dd{margin:0;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;overflow-wrap:anywhere}
-.sdjev-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px}
-.sdjev-value{display:inline-flex;align-items:center;gap:6px}
-.sdjev-value-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
-.sdjev-value[data-tone=${PILL_TONE.success}]{color:var(--dsw-alias-state-success-primary)}
-.sdjev-value[data-tone=${PILL_TONE.error}]{color:var(--dsw-alias-state-error-primary)}
-.sdjev-empty{margin:0;padding:12px;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}
-.sdjev-status{margin:0;padding:12px;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;line-height:18px;white-space:pre-wrap;overflow-wrap:anywhere}
-.sdjev-hint{margin:0;padding:8px 10px;border-left:2px solid var(--dsw-alias-state-business-primary);border-radius:0 var(--dsw-radius-sm) var(--dsw-radius-sm) 0;background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}
-.sdjev-refresh{min-width:96px}
-@media (max-width:480px){.sdjev-root{padding:12px}.sdjev-dialog{max-height:calc(100dvh - 24px)}.sdjev-actions .sdjev-button{flex:1 1 auto}}
-`.trim();
+// src/client/constants.ts
+var SLOT_NAME = "conversation.composer.dock";
+var SLOT_ID = "jev";
+var SLOT_ORDER = 30;
+var LOCALE_NAMESPACE = "sideroom-jev";
+var CHIP_LABEL = "Jev";
+var DEFAULT_KEY_ENV = "TYPESAFE_API_KEY";
+var STATUS_COMMAND = "/jev status";
+var CREDENTIAL_UPDATE_EVENT = "credentials/reference-updated";
+var CREDENTIAL_SOURCE_ENVIRONMENT = "env";
+var CREDENTIAL_SOURCE_STORE = "file";
+var STYLE_ATTRIBUTE = "data-sideroom-jev";
+var KEY_ENV_LINE = /^keyEnv:[ \t]*(.+?)[ \t]*$/mu;
+var STORE_PHASE = {
+  idle: "idle",
+  loading: "loading",
+  ready: "ready",
+  failed: "failed"
+};
 
-    const EMPTY_STATUS = Object.freeze({
-      phase: STORE_PHASE.idle,
-      text: undefined,
-      error: undefined,
-      sessionId: undefined,
-    });
+// src/client/model/key-view.ts
+function chipTitle(t, snapshot) {
+  if (snapshot.phase !== STORE_PHASE.ready) {
+    return t("chip.title.unavailable");
+  }
+  return snapshot.key?.configured === true ? t("chip.title.withKey") : t("chip.title.withoutKey");
+}
+function keyTone(snapshot) {
+  if (snapshot.phase === STORE_PHASE.failed) {
+    return "failed";
+  }
+  if (snapshot.phase === STORE_PHASE.loading) {
+    return "loading";
+  }
+  return snapshot.key?.configured === true ? "ok" : "missing";
+}
+function keyLabel(t, snapshot) {
+  if (snapshot.phase === STORE_PHASE.failed) {
+    return t("key.source.unavailable");
+  }
+  if (snapshot.key === void 0) {
+    return snapshot.phase === STORE_PHASE.loading ? t("key.source.loading") : t("key.source.missing");
+  }
+  if (snapshot.key.configured !== true) {
+    return t("key.source.missing");
+  }
+  if (snapshot.key.source === CREDENTIAL_SOURCE_ENVIRONMENT) {
+    return t("key.source.environment");
+  }
+  return t("key.source.stored");
+}
+function keySourceText(t, snapshot) {
+  if (snapshot.phase === STORE_PHASE.failed) {
+    return t("key.unavailable");
+  }
+  const key = snapshot.key;
+  if (key === void 0) {
+    return snapshot.phase === STORE_PHASE.loading ? t("key.loading") : t("key.missing", { name: snapshot.keyEnv });
+  }
+  if (key.configured !== true) {
+    return t("key.missing", { name: snapshot.keyEnv });
+  }
+  if (key.source === CREDENTIAL_SOURCE_ENVIRONMENT) {
+    return t("key.fromEnvironment", { name: snapshot.keyEnv });
+  }
+  if (key.source === CREDENTIAL_SOURCE_STORE) {
+    return t("key.stored", { name: snapshot.keyEnv });
+  }
+  return t("key.configured", { name: snapshot.keyEnv });
+}
+function keyMaskedText(snapshot) {
+  if (snapshot.key?.configured !== true) {
+    return void 0;
+  }
+  return snapshot.key.masked;
+}
+function keyLockedByEnvironment(snapshot) {
+  return snapshot.key?.source === CREDENTIAL_SOURCE_ENVIRONMENT;
+}
+function keyEditable(snapshot) {
+  if (snapshot.phase !== STORE_PHASE.ready) {
+    return false;
+  }
+  if (snapshot.key?.writable === false) {
+    return false;
+  }
+  return !keyLockedByEnvironment(snapshot);
+}
 
-    function messageOf(error) {
-      return error instanceof Error ? error.message : String(error);
+// src/client/components/dot-state.ts
+var PILL_TONE_STATE = {
+  business: "ongoing",
+  error: "error",
+  neutral: "idle",
+  success: "done"
+};
+var KEY_TONE_STATE = {
+  ok: "done",
+  missing: "warning",
+  failed: "error",
+  loading: "ongoing"
+};
+
+// src/client/components/jev-dialog.tsx
+var import_dsh_client_ui_primitives6 = require("@deepseek-ai/dsh-client-ui-primitives");
+var import_react2 = require("react");
+
+// src/client/run.ts
+function runInBackground(promise) {
+  promise.catch((error) => {
+    console.error("sideroom-dsh: a Jev request failed", error);
+  });
+}
+
+// src/client/components/credential-section.tsx
+var import_dsh_client_ui_primitives3 = require("@deepseek-ai/dsh-client-ui-primitives");
+var import_react = require("react");
+
+// src/client/components/key-input.tsx
+var import_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
+var import_jsx_runtime = require("react/jsx-runtime");
+function KeyInput({
+  t,
+  value,
+  revealed,
+  onChange,
+  onToggleReveal
+}) {
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "sideroom-jev__field", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      import_dsh_client_ui_primitives.Input,
+      {
+        className: "sideroom-jev__input",
+        type: revealed ? "text" : "password",
+        value,
+        placeholder: t("key.placeholder"),
+        "aria-label": t("key.heading"),
+        autoComplete: "off",
+        spellCheck: false,
+        onChange
+      }
+    ),
+    value.trim() === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_dsh_client_ui_primitives.Button, { size: "sm", variant: "ghost", onClick: onToggleReveal, children: revealed ? t("key.hide") : t("key.show") })
+  ] });
+}
+
+// src/client/components/remove-confirmation.tsx
+var import_dsh_client_ui_primitives2 = require("@deepseek-ai/dsh-client-ui-primitives");
+var import_jsx_runtime2 = require("react/jsx-runtime");
+function RemoveConfirmation({
+  t,
+  saving,
+  removing,
+  onConfirm,
+  onCancel
+}) {
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "sideroom-jev__confirm", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "sideroom-jev__note", children: t("key.removeConfirm") }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "sideroom-jev__actions", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_dsh_client_ui_primitives2.Button, { size: "sm", variant: "primary", disabled: saving, onClick: onConfirm, children: removing ? t("key.removing") : t("key.removeConfirmAction") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_dsh_client_ui_primitives2.Button, { size: "sm", variant: "ghost", disabled: saving, onClick: onCancel, children: t("key.cancel") })
+    ] })
+  ] });
+}
+
+// src/client/components/credential-section.tsx
+var import_jsx_runtime3 = require("react/jsx-runtime");
+var BUSY = { save: "save", remove: "remove" };
+function CredentialSection({
+  t,
+  snapshot,
+  jev,
+  onSaved
+}) {
+  const [draft, setDraft] = (0, import_react.useState)("");
+  const [revealed, setRevealed] = (0, import_react.useState)(false);
+  const [busy, setBusy] = (0, import_react.useState)(void 0);
+  const [failure, setFailure] = (0, import_react.useState)(void 0);
+  const [notice, setNotice] = (0, import_react.useState)(void 0);
+  const [confirmingRemove, setConfirmingRemove] = (0, import_react.useState)(false);
+  const editable = keyEditable(snapshot);
+  const locked = keyLockedByEnvironment(snapshot);
+  const readOnly = snapshot.key?.writable === false;
+  const saving = busy !== void 0;
+  const hasDraft = draft.trim() !== "";
+  const save = (0, import_react.useCallback)(() => {
+    if (saving || !editable || !hasDraft) {
+      return;
     }
-
-    function keyEnvOf(report) {
-      const match = KEY_ENV_LINE.exec(report);
-      return match === null ? undefined : match[1];
-    }
-
-    function ensureStyles() {
-      const head = typeof document === 'undefined' ? undefined : document.head;
-      if (head === undefined) {
-        return;
-      }
-      if (head.querySelector(`style[${STYLE_MARKER}]`) !== null) {
-        return;
-      }
-      const style = document.createElement('style');
-      style.setAttribute(STYLE_MARKER, '');
-      style.textContent = STYLE_TEXT;
-      head.appendChild(style);
-    }
-
-    function createJevStore({ credentials, commands }) {
-      let snapshot = {
-        phase: STORE_PHASE.loading,
-        keyEnv: DEFAULT_KEY_ENV,
-        key: undefined,
-        error: undefined,
-        status: EMPTY_STATUS,
-      };
-      const listeners = new Set();
-
-      function getSnapshot() {
-        return snapshot;
-      }
-
-      function subscribe(listener) {
-        listeners.add(listener);
-        return () => {
-          listeners.delete(listener);
-        };
-      }
-
-      function publish(patch) {
-        snapshot = { ...snapshot, ...patch };
-        for (const listener of listeners) {
-          listener();
-        }
-      }
-
-      async function readKey() {
-        const response = await credentials.describe([snapshot.keyEnv]);
-        if (!response.ok) {
-          publish({ phase: STORE_PHASE.failed, error: response.error.message });
-          return;
-        }
-        publish({
-          phase: STORE_PHASE.ready,
-          error: undefined,
-          key: response.value[snapshot.keyEnv],
-        });
-      }
-
-      async function refresh() {
-        try {
-          await readKey();
-        } catch (error) {
-          publish({ phase: STORE_PHASE.failed, error: messageOf(error) });
-        }
-      }
-
-      async function write(operation) {
-        try {
-          const response = await operation();
-          if (!response.ok) {
-            return response.error.message;
-          }
-          await refresh();
-          return undefined;
-        } catch (error) {
-          return messageOf(error);
-        }
-      }
-
-      function saveKey(value) {
-        return write(() => credentials.set(snapshot.keyEnv, value));
-      }
-
-      function removeKey() {
-        return write(() => credentials.unset(snapshot.keyEnv));
-      }
-
-      async function loadStatus(sessionId) {
-        if (sessionId === undefined) {
-          publish({ status: statusFailure({ sessionId, error: undefined }) });
-          return;
-        }
-        publish({ status: statusLoading({ sessionId, text: snapshot.status.text }) });
-        try {
-          const response = await commands.execute(sessionId, STATUS_COMMAND);
-          if (!response.ok) {
-            publish({
-              status: statusFailure({ sessionId, error: response.error.message }),
-            });
-            return;
-          }
-          const answer = statusAnswerOf(response.value);
-          if (answer === undefined || answer.kind !== 'success' || answer.text === undefined) {
-            publish({
-              status: statusFailure({
-                sessionId,
-                error: answer === undefined ? undefined : answer.text,
-              }),
-            });
-            return;
-          }
-          const text = answer.text;
-          const previousKeyEnv = snapshot.keyEnv;
-          const keyEnv = keyEnvOf(text) ?? previousKeyEnv;
-          publish({ status: statusReady({ sessionId, text }), keyEnv });
-          if (keyEnv !== previousKeyEnv) {
-            await refresh();
-          }
-        } catch (error) {
-          publish({
-            status: statusFailure({ sessionId, error: messageOf(error) }),
-          });
-        }
-      }
-
-      return { getSnapshot, subscribe, refresh, saveKey, removeKey, loadStatus };
-    }
-
-    function statusLoading({ sessionId, text }) {
-      return {
-        phase: STORE_PHASE.loading,
-        text,
-        error: undefined,
-        sessionId,
-      };
-    }
-
-    function statusReady({ sessionId, text }) {
-      return {
-        phase: STORE_PHASE.ready,
-        text,
-        error: undefined,
-        sessionId,
-      };
-    }
-
-    function statusFailure({ sessionId, error }) {
-      return {
-        phase: STORE_PHASE.failed,
-        text: undefined,
-        error,
-        sessionId,
-      };
-    }
-
-    function statusAnswerOf(execution) {
-      if (execution === undefined || execution === null) {
-        return undefined;
-      }
-      return execution.result;
-    }
-
-    function chipTitle(t, state) {
-      if (state.phase !== STORE_PHASE.ready) {
-        return t('chip.title.unavailable');
-      }
-      return state.key?.configured === true
-        ? t('chip.title.withKey')
-        : t('chip.title.withoutKey');
-    }
-
-    function dotStateOf(state) {
-      if (state.phase === STORE_PHASE.failed) {
-        return DOT_STATE.failed;
-      }
-      if (state.key?.configured !== true) {
-        return DOT_STATE.missing;
-      }
-      return DOT_STATE.configured;
-    }
-
-    function keySourceText(t, state) {
-      if (state.phase === STORE_PHASE.failed) {
-        return t('key.unavailable');
-      }
-      const key = state.key;
-      if (key === undefined) {
-        return state.phase === STORE_PHASE.loading
-          ? t('key.loading')
-          : t('key.missing', { name: state.keyEnv });
-      }
-      if (key.configured !== true) {
-        return t('key.missing', { name: state.keyEnv });
-      }
-      if (key.source === CREDENTIAL_SOURCE_ENVIRONMENT) {
-        return t('key.fromEnvironment', { name: state.keyEnv });
-      }
-      if (key.source === CREDENTIAL_SOURCE_STORE) {
-        return key.masked === undefined
-          ? t('key.stored', { name: state.keyEnv })
-          : t('key.storedMasked', { name: state.keyEnv, masked: key.masked });
-      }
-      return t('key.configured', { name: state.keyEnv });
-    }
-
-    function keyPillOf(t, state) {
-      if (state.phase === STORE_PHASE.failed) {
-        return { tone: PILL_TONE.error, label: t('key.source.unavailable') };
-      }
-      if (state.phase === STORE_PHASE.loading) {
-        return { tone: PILL_TONE.neutral, label: t('key.source.loading') };
-      }
-      if (state.key?.configured !== true) {
-        return { tone: PILL_TONE.neutral, label: t('key.source.missing') };
-      }
-      if (state.key.source === CREDENTIAL_SOURCE_ENVIRONMENT) {
-        return { tone: PILL_TONE.business, label: t('key.source.environment') };
-      }
-      return { tone: PILL_TONE.business, label: t('key.source.stored') };
-    }
-
-    function keyLockedByEnvironment(state) {
-      return state.key?.source === CREDENTIAL_SOURCE_ENVIRONMENT;
-    }
-
-    function keyEditable(state) {
-      if (state.phase !== STORE_PHASE.ready) {
-        return false;
-      }
-      if (state.key?.writable === false) {
-        return false;
-      }
-      return !keyLockedByEnvironment(state);
-    }
-
-    function parseReport(text) {
-      const fields = [];
-      let hint;
-      for (const rawLine of text.split('\n')) {
-        const match = REPORT_FIELD_LINE.exec(rawLine.trim());
-        if (match === null) {
-          continue;
-        }
-        const name = match[1];
-        const value = match[2].trim();
-        if (name === REPORT_HINT_FIELD) {
-          hint = value;
-          continue;
-        }
-        fields.push({ name, value });
-      }
-      if (fields.length === 0) {
-        return undefined;
-      }
-      return { fields, hint };
-    }
-
-    function orderedReportFields(fields) {
-      const byName = new Map(fields.map((field) => [field.name, field]));
-      const known = REPORT_FIELD_ORDER
-        .filter((name) => byName.has(name))
-        .map((name) => byName.get(name));
-      const unknown = fields.filter((field) => !REPORT_FIELD_ORDER.includes(field.name));
-      return [...known, ...unknown];
-    }
-
-    function translateKnown({ t, labels, value }) {
-      if (!Object.hasOwn(labels, value)) {
-        return value;
-      }
-      return t(labels[value]);
-    }
-
-    function reportLabelOf(t, name) {
-      if (!Object.hasOwn(REPORT_LABELS, name)) {
-        return name;
-      }
-      return t(REPORT_LABELS[name]);
-    }
-
-    function reportValueOf(t, field) {
-      if (field.name === 'enabled') {
-        return field.value === REPORT_ENABLED_TRUE
-          ? t('status.enabled.true')
-          : t('status.enabled.false');
-      }
-      if (field.name === 'key') {
-        return translateKnown({ t, labels: REPORT_KEY_SOURCE_LABELS, value: field.value });
-      }
-      if (field.name === REPORT_STATUS_FIELD) {
-        return translateKnown({ t, labels: REPORT_STATUS_LABELS, value: field.value });
-      }
-      if (field.name === 'muted' && field.value === NO_MUTED_RULES) {
-        return t('status.mutedNone');
-      }
-      return field.value;
-    }
-
-    function reportToneOf(field) {
-      if (field.name !== REPORT_STATUS_FIELD) {
-        return PILL_TONE.neutral;
-      }
-      return REPORT_STATUS_TONES[field.value] ?? PILL_TONE.neutral;
-    }
-
-    function reportRowsOf(t, fields) {
-      return orderedReportFields(fields).map((field) => ({
-        name: field.name,
-        label: reportLabelOf(t, field.name),
-        value: reportValueOf(t, field),
-        tone: reportToneOf(field),
-        mono: MONO_FIELDS.has(field.name),
-      }));
-    }
-
-    function statusErrorView({ t, status }) {
-      if (status.error === undefined && status.sessionId === undefined) {
-        return { kind: STATUS_VIEW.text, text: t('status.noSession') };
-      }
-      return { kind: STATUS_VIEW.error, text: t('status.failed'), detail: status.error };
-    }
-
-    function statusViewOf({ t, status, sessionId }) {
-      if (status.phase === STORE_PHASE.failed) {
-        return statusErrorView({ t, status });
-      }
-      if (status.text !== undefined) {
-        const parsed = parseReport(status.text);
-        if (parsed === undefined) {
-          return { kind: STATUS_VIEW.raw, text: status.text };
-        }
-        return {
-          kind: STATUS_VIEW.report,
-          rows: reportRowsOf(t, parsed.fields),
-          hint: parsed.hint,
-        };
-      }
-      if (status.phase === STORE_PHASE.loading) {
-        return { kind: STATUS_VIEW.text, text: t('status.loading') };
-      }
-      return {
-        kind: STATUS_VIEW.text,
-        text: sessionId === undefined ? t('status.noSession') : t('status.idle'),
-      };
-    }
-
-    function JevChip({ t, sessionId, useJevState, jev }) {
-      const state = useJevState((current) => current);
-      const [open, setOpen] = useState(false);
-      const openDialog = useCallback(() => {
-        setOpen(true);
-      }, []);
-      const closeDialog = useCallback(() => {
-        setOpen(false);
-      }, []);
-      const title = chipTitle(t, state);
-      return h(
-        Fragment,
-        null,
-        h(
-          'button',
-          {
-            'type': 'button',
-            'className': 'sdjev-chip',
-            title,
-            'aria-label': title,
-            'aria-haspopup': 'dialog',
-            'aria-expanded': open,
-            'onClick': openDialog,
-          },
-          h('span', {
-            'className': 'sdjev-dot',
-            'data-state': dotStateOf(state),
-            'aria-hidden': 'true',
-          }),
-          CHIP_LABEL,
-        ),
-        open
-          ? h(JevDialog, { t, sessionId, state, jev, onClose: closeDialog })
-          : null,
-      );
-    }
-
-    function JevDialog({ t, sessionId, state, jev, onClose }) {
-      const dialogRef = useRef(null);
-
-      useDialogFocus({ dialogRef });
-      useDialogKeys({ dialogRef, onClose });
-      useScrollLock();
-
-      const refresh = useCallback(() => {
-        void jev.loadStatus(sessionId);
-      }, [jev, sessionId]);
-
-      useEffect(() => {
-        if (sessionId === undefined) {
-          return;
-        }
-        const { phase, sessionId: loadedSessionId } = state.status;
-        if (phase !== STORE_PHASE.idle && loadedSessionId === sessionId) {
-          return;
-        }
-        void jev.loadStatus(sessionId);
-      }, [jev, sessionId, state.status]);
-
-      return createPortal(
-        h(
-          'div',
-          { className: 'sdjev-root' },
-          h('div', {
-            'className': 'sdjev-mask',
-            'onClick': onClose,
-            'aria-hidden': 'true',
-          }),
-          h(
-            'div',
-            {
-              'ref': dialogRef,
-              'className': 'sdjev-dialog',
-              'role': 'dialog',
-              'aria-modal': 'true',
-              'aria-labelledby': TITLE_ID,
-              'aria-describedby': DESCRIPTION_ID,
-              'tabIndex': -1,
-            },
-            h(
-              'header',
-              { className: 'sdjev-header' },
-              h(
-                'div',
-                { className: 'sdjev-heading-group' },
-                h('h2', { className: 'sdjev-title', id: TITLE_ID }, t('dialog.title')),
-                h('p', { className: 'sdjev-description', id: DESCRIPTION_ID }, t('dialog.description')),
-              ),
-              h(
-                'button',
-                {
-                  'type': 'button',
-                  'className': 'sdjev-close',
-                  'title': t('dialog.close'),
-                  'aria-label': t('dialog.close'),
-                  'onClick': onClose,
-                },
-                '\u00d7',
-              ),
-            ),
-            h(
-              'div',
-              { className: 'sdjev-body' },
-              h(KeyPanel, { t, state, jev, onSaved: refresh }),
-              h(StatusPanel, {
-                t,
-                sessionId,
-                status: state.status,
-                onRefresh: refresh,
-              }),
-            ),
-          ),
-        ),
-        document.body,
-      );
-    }
-
-    function KeyPanel({ t, state, jev, onSaved }) {
-      const [draft, setDraft] = useState('');
-      const [revealed, setRevealed] = useState(false);
-      const [busy, setBusy] = useState(undefined);
-      const [failure, setFailure] = useState(undefined);
-      const [notice, setNotice] = useState(undefined);
-      const [confirmingRemove, setConfirmingRemove] = useState(false);
-
-      const editable = keyEditable(state);
-      const saving = busy !== undefined;
-      const hasDraft = draft.trim() !== '';
-
-      const save = useCallback(async () => {
-        if (saving || !editable || !hasDraft) {
-          return;
-        }
-        setBusy(BUSY_SAVE);
-        setFailure(undefined);
-        setNotice(undefined);
-        const message = await jev.saveKey(draft.trim());
-        setBusy(undefined);
-        if (message !== undefined) {
-          setFailure(
-            t('error.template', {
-              action: t('error.action.save'),
-              reason: message,
-            }),
-          );
-          return;
-        }
-        setDraft('');
+    setBusy(BUSY.save);
+    setFailure(void 0);
+    setNotice(void 0);
+    jev.saveKey(draft.trim()).then((message) => {
+      setBusy(void 0);
+      if (message === void 0) {
+        setDraft("");
         setRevealed(false);
-        setNotice(t('key.saved'));
+        setNotice(t("key.saved"));
         onSaved();
-      }, [draft, editable, hasDraft, jev, onSaved, saving, t]);
-
-      const remove = useCallback(async () => {
-        if (saving) {
-          return;
-        }
-        setBusy(BUSY_REMOVE);
-        setFailure(undefined);
-        setNotice(undefined);
-        const message = await jev.removeKey();
-        setBusy(undefined);
-        setConfirmingRemove(false);
-        if (message !== undefined) {
-          setFailure(
-            t('error.template', {
-              action: t('error.action.remove'),
-              reason: message,
-            }),
-          );
-          return;
-        }
-        setNotice(t('key.removed'));
+        return;
+      }
+      setFailure(t("error.template", {
+        action: t("error.action.save"),
+        reason: message
+      }));
+    }).catch((error) => {
+      setBusy(void 0);
+      setFailure(errorMessageOf(error));
+    });
+  }, [draft, editable, hasDraft, jev, onSaved, saving, t]);
+  const remove = (0, import_react.useCallback)(() => {
+    if (saving) {
+      return;
+    }
+    setBusy(BUSY.remove);
+    setFailure(void 0);
+    setNotice(void 0);
+    jev.removeKey().then((message) => {
+      setBusy(void 0);
+      setConfirmingRemove(false);
+      if (message === void 0) {
+        setNotice(t("key.removed"));
         onSaved();
-      }, [jev, onSaved, saving, t]);
-
-      const cancelRemove = useCallback(() => {
-        setConfirmingRemove(false);
-      }, []);
-
-      const changeDraft = useCallback((event) => {
-        setDraft(event.target.value);
-        setFailure(undefined);
-        setNotice(undefined);
-      }, []);
-
-      const toggleReveal = useCallback(() => {
-        setRevealed((current) => !current);
-      }, []);
-
-      const onInputKeyDown = useCallback(
-        (event) => {
-          if (event.key !== 'Enter') {
-            return;
-          }
-          event.preventDefault();
-          void save();
-        },
-        [save],
-      );
-
-      const pill = keyPillOf(t, state);
-      const locked = keyLockedByEnvironment(state);
-      const readOnly = state.key?.writable === false;
-      const saveDisabled = saving || !editable || !hasDraft;
-      const removeDisabled = saving || !editable || state.key?.configured !== true;
-
-      return h(
-        'section',
-        { className: 'sdjev-section' },
-        h(
-          'div',
-          { className: 'sdjev-section-header' },
-          h('h3', { className: 'sdjev-heading' }, t('key.heading')),
-          h(
-            'span',
-            { 'className': 'sdjev-pill', 'data-tone': pill.tone },
-            h('span', { 'className': 'sdjev-pill-dot', 'aria-hidden': 'true' }),
-            pill.label,
-          ),
-        ),
-        state.phase === STORE_PHASE.failed
-          ? h(
-              'p',
-              { className: 'sdjev-error' },
-              state.error === undefined
-                ? t('key.unavailable')
-                : t('key.unavailableDetail', { reason: state.error }),
-            )
-          : h('p', { className: 'sdjev-note' }, keySourceText(t, state)),
-        editable
-          ? h(
-              'div',
-              { 'className': 'sdjev-field', 'data-reveal': hasDraft },
-              h('input', {
-                'id': KEY_INPUT_ID,
-                'className': 'sdjev-input',
-                'type': revealed ? 'text' : 'password',
-                'autoComplete': 'off',
-                'spellCheck': false,
-                'placeholder': t('key.placeholder'),
-                'aria-label': t('key.heading'),
-                'aria-invalid': failure !== undefined,
-                'aria-describedby': failure === undefined ? undefined : KEY_ERROR_ID,
-                'value': draft,
-                'onChange': changeDraft,
-                'onKeyDown': onInputKeyDown,
-              }),
-              hasDraft
-                ? h(
-                    'button',
-                    {
-                      'type': 'button',
-                      'className': 'sdjev-reveal',
-                      'aria-pressed': revealed,
-                      'onClick': toggleReveal,
-                    },
-                    revealed ? t('key.hide') : t('key.show'),
-                  )
-                : null,
-            )
-          : null,
-        editable && confirmingRemove
-          ? h(
-              'div',
-              { className: 'sdjev-confirm' },
-              h('p', { className: 'sdjev-confirm-text' }, t('key.removeConfirm')),
-              h(
-                'div',
-                { className: 'sdjev-actions' },
-                h(
-                  'button',
-                  {
-                    type: 'button',
-                    className: 'sdjev-button sdjev-button-danger',
-                    onClick: remove,
-                    disabled: saving,
-                  },
-                  busy === BUSY_REMOVE ? t('key.removing') : t('key.removeConfirmAction'),
-                ),
-                h(
-                  'button',
-                  {
-                    type: 'button',
-                    className: 'sdjev-button sdjev-button-quiet',
-                    onClick: cancelRemove,
-                    disabled: saving,
-                  },
-                  t('key.cancel'),
-                ),
-              ),
-            )
-          : null,
-        editable && !confirmingRemove
-          ? h(
-              'div',
-              { className: 'sdjev-actions' },
-              h(
-                'button',
-                {
-                  type: 'button',
-                  className: 'sdjev-button sdjev-button-primary',
-                  onClick: save,
-                  disabled: saveDisabled,
-                },
-                busy === BUSY_SAVE ? t('key.saving') : t('key.save'),
-              ),
-              h(
-                'button',
-                {
-                  type: 'button',
-                  className: 'sdjev-button sdjev-button-quiet sdjev-button-spaced',
-                  onClick: () => {
-                    setConfirmingRemove(true);
-                  },
-                  disabled: removeDisabled,
-                },
-                t('key.remove'),
-              ),
-            )
-          : null,
-        failure === undefined
-          ? null
-          : h('p', { className: 'sdjev-error', id: KEY_ERROR_ID, role: 'alert' }, failure),
-        notice === undefined
-          ? null
-          : h('p', { className: 'sdjev-success', role: 'status' }, notice),
-        !locked && readOnly
-          ? h('p', { className: 'sdjev-note' }, t('key.readOnly'))
-          : null,
-        locked
-          ? h('p', { className: 'sdjev-note' }, t('key.environmentLocked', { name: state.keyEnv }))
-          : null,
-        h('p', { className: 'sdjev-privacy' }, t('key.privacy')),
-      );
-    }
-
-    function StatusPanel({ t, sessionId, status, onRefresh }) {
-      const view = statusViewOf({ t, status, sessionId });
-      const refreshing = status.phase === STORE_PHASE.loading;
-      return h(
-        'section',
-        { 'className': 'sdjev-section', 'aria-busy': refreshing },
-        h(
-          'div',
-          { className: 'sdjev-section-header' },
-          h('h3', { className: 'sdjev-heading' }, t('status.heading')),
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'sdjev-button sdjev-button-quiet sdjev-refresh',
-              onClick: onRefresh,
-              disabled: refreshing || sessionId === undefined,
-            },
-            refreshing ? t('status.refreshing') : t('status.refresh'),
-          ),
-        ),
-        statusBodyOf(t, view),
-      );
-    }
-
-    function statusBodyOf(t, view) {
-      if (view.kind === STATUS_VIEW.error) {
-        return h(
-          'p',
-          { className: 'sdjev-error' },
-          view.detail === undefined ? view.text : `${view.text} ${view.detail}`,
-        );
+        return;
       }
-      if (view.kind === STATUS_VIEW.raw) {
-        return h('pre', { className: 'sdjev-status' }, view.text);
+      setFailure(t("error.template", {
+        action: t("error.action.remove"),
+        reason: message
+      }));
+    }).catch((error) => {
+      setBusy(void 0);
+      setConfirmingRemove(false);
+      setFailure(errorMessageOf(error));
+    });
+  }, [jev, onSaved, saving, t]);
+  const changeDraft = (0, import_react.useCallback)((event) => {
+    setDraft(event.target.value);
+    setFailure(void 0);
+    setNotice(void 0);
+  }, []);
+  const toggleReveal = (0, import_react.useCallback)(() => {
+    setRevealed((current) => !current);
+  }, []);
+  const cancelRemove = (0, import_react.useCallback)(() => {
+    setConfirmingRemove(false);
+  }, []);
+  const requestRemove = (0, import_react.useCallback)(() => {
+    setConfirmingRemove(true);
+  }, []);
+  const pill = keyLabel(t, snapshot);
+  const masked = keyMaskedText(snapshot);
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("section", { className: "sideroom-jev__section", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("header", { className: "sideroom-jev__section-header", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h3", { className: "sideroom-jev__heading", children: t("key.heading") }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: "sideroom-jev__badge", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_dsh_client_ui_primitives3.StateDot, { state: KEY_TONE_STATE[keyTone(snapshot)] }),
+        pill
+      ] })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: snapshot.phase === "failed" ? "sideroom-jev__error" : "sideroom-jev__source", children: keySourceText(t, snapshot) }),
+    masked === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("code", { className: "sideroom-jev__masked", children: masked }),
+    editable ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+      KeyInput,
+      {
+        t,
+        value: draft,
+        revealed,
+        onChange: changeDraft,
+        onToggleReveal: toggleReveal
       }
-      if (view.kind === STATUS_VIEW.text) {
-        return h('p', { className: 'sdjev-empty' }, view.text);
+    ) : null,
+    editable && confirmingRemove ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+      RemoveConfirmation,
+      {
+        t,
+        saving,
+        removing: busy === BUSY.remove,
+        onConfirm: remove,
+        onCancel: cancelRemove
       }
-      return h(
-        Fragment,
-        null,
-        h(
-          'dl',
-          { className: 'sdjev-fields' },
-          view.rows.map((row) => h(
-            'div',
-            { key: row.name, className: 'sdjev-field-row' },
-            h('dt', null, row.label),
-            h('dd', { className: row.mono ? 'sdjev-mono' : undefined }, statusValueOf(row)),
-          )),
-        ),
-        view.hint === undefined
-          ? null
-          : h('p', { className: 'sdjev-hint' }, view.hint),
-      );
-    }
-
-    function statusValueOf(row) {
-      if (row.name !== REPORT_STATUS_FIELD) {
-        return row.value;
-      }
-      return h(
-        'span',
-        { 'className': 'sdjev-value', 'data-tone': row.tone },
-        h('span', { 'className': 'sdjev-value-dot', 'aria-hidden': 'true' }),
-        row.value,
-      );
-    }
-
-    function useDialogFocus({ dialogRef }) {
-      useEffect(() => {
-        const previous = document.activeElement;
-        const dialog = dialogRef.current;
-        if (dialog !== null) {
-          dialog.focus();
+    ) : null,
+    editable && !confirmingRemove ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "sideroom-jev__actions", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_dsh_client_ui_primitives3.Button, { size: "sm", variant: "primary", disabled: saving || !hasDraft, onClick: save, children: busy === BUSY.save ? t("key.saving") : t("key.save") }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        import_dsh_client_ui_primitives3.Button,
+        {
+          size: "sm",
+          variant: "outline",
+          disabled: saving || snapshot.key?.configured !== true,
+          onClick: requestRemove,
+          children: t("key.remove")
         }
-        return () => {
-          if (previous instanceof HTMLElement) {
-            previous.focus();
-          }
-        };
-      }, [dialogRef]);
-    }
+      )
+    ] }) : null,
+    failure === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "sideroom-jev__error", role: "alert", children: failure }),
+    notice === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "sideroom-jev__notice", role: "status", children: notice }),
+    !locked && readOnly ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "sideroom-jev__note", children: t("key.readOnly") }) : null,
+    locked ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "sideroom-jev__note", children: t("key.environmentLocked", { name: snapshot.keyEnv }) }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "sideroom-jev__note", children: t("key.privacy") })
+  ] });
+}
+function errorMessageOf(error) {
+  return error instanceof Error ? error.message : String(error);
+}
 
-    function useDialogKeys({ dialogRef, onClose }) {
-      useEffect(() => {
-        const dialog = dialogRef.current;
-        if (dialog === null) {
-          return undefined;
+// src/client/components/status-section.tsx
+var import_dsh_client_ui_primitives5 = require("@deepseek-ai/dsh-client-ui-primitives");
+
+// src/client/model/report.ts
+var PILL_TONE = {
+  business: "business",
+  error: "error",
+  neutral: "neutral",
+  success: "success"
+};
+var REPORT_FIELD_ORDER = [
+  "enabled",
+  "keyEnv",
+  "key",
+  "model",
+  "status",
+  "calls",
+  "cutoff",
+  "gate",
+  "muted"
+];
+var REPORT_STATUS_FIELD = "status";
+var REPORT_HINT_FIELD = "hint";
+var NO_MUTED_RULES = "none";
+var REPORT_FIELD_LINE = /^([a-z][a-zA-Z0-9]*):[ \t]*(.*)$/u;
+var MONO_FIELDS = /* @__PURE__ */ new Set(["keyEnv", "model"]);
+var REPORT_ENABLED_TRUE = "true";
+var REPORT_STATUS_VALUES = {
+  ready: "ready",
+  noKey: "noKey",
+  off: "off",
+  quota: "quota",
+  auth: "auth",
+  rateLimited: "rateLimited",
+  unavailable: "unavailable"
+};
+var REPORT_LABELS = {
+  enabled: "status.fields.enabled",
+  keyEnv: "status.fields.keyEnv",
+  key: "status.fields.key",
+  model: "status.fields.model",
+  status: "status.fields.status",
+  calls: "status.fields.calls",
+  cutoff: "status.fields.cutoff",
+  gate: "status.fields.gate",
+  muted: "status.fields.muted"
+};
+var REPORT_KEY_SOURCE_LABELS = {
+  environment: "key.source.environment",
+  credentials: "key.source.stored",
+  missing: "key.source.missing"
+};
+var REPORT_STATUS_LABELS = {
+  [REPORT_STATUS_VALUES.ready]: "status.state.ready",
+  [REPORT_STATUS_VALUES.noKey]: "status.state.noKey",
+  [REPORT_STATUS_VALUES.off]: "status.state.off",
+  [REPORT_STATUS_VALUES.quota]: "status.state.quota",
+  [REPORT_STATUS_VALUES.auth]: "status.state.auth",
+  [REPORT_STATUS_VALUES.rateLimited]: "status.state.rateLimited",
+  [REPORT_STATUS_VALUES.unavailable]: "status.state.unavailable"
+};
+var REPORT_STATUS_TONES = {
+  [REPORT_STATUS_VALUES.ready]: PILL_TONE.success,
+  [REPORT_STATUS_VALUES.noKey]: PILL_TONE.error,
+  [REPORT_STATUS_VALUES.auth]: PILL_TONE.error,
+  [REPORT_STATUS_VALUES.quota]: PILL_TONE.error,
+  [REPORT_STATUS_VALUES.unavailable]: PILL_TONE.error,
+  [REPORT_STATUS_VALUES.off]: PILL_TONE.neutral,
+  [REPORT_STATUS_VALUES.rateLimited]: PILL_TONE.neutral
+};
+function parseReport(text) {
+  const fields = [];
+  let hint;
+  for (const rawLine of text.split("\n")) {
+    const match = REPORT_FIELD_LINE.exec(rawLine.trim());
+    if (match === null) {
+      continue;
+    }
+    const name = match[1];
+    const value = match[2].trim();
+    if (name === REPORT_HINT_FIELD) {
+      hint = value;
+      continue;
+    }
+    fields.push({ name, value });
+  }
+  if (fields.length === 0) {
+    return void 0;
+  }
+  return { fields, hint };
+}
+function reportRowsOf(t, fields) {
+  return orderedReportFields(fields).map((field) => ({
+    name: field.name,
+    label: translateKnown({ t, labels: REPORT_LABELS, value: field.name }),
+    value: reportValueOf(t, field),
+    tone: reportToneOf(field),
+    mono: MONO_FIELDS.has(field.name),
+    marked: field.name === REPORT_STATUS_FIELD
+  }));
+}
+function orderedReportFields(fields) {
+  const byName = new Map(fields.map((field) => [field.name, field]));
+  const known = REPORT_FIELD_ORDER.filter((name) => byName.has(name)).map((name) => byName.get(name)).filter((field) => field !== void 0);
+  const unknown = fields.filter(
+    (field) => !REPORT_FIELD_ORDER.includes(field.name)
+  );
+  return [...known, ...unknown];
+}
+function translateKnown({
+  t,
+  labels,
+  value
+}) {
+  if (!Object.hasOwn(labels, value)) {
+    return value;
+  }
+  return t(labels[value]);
+}
+function reportValueOf(t, field) {
+  if (field.name === "enabled") {
+    return field.value === REPORT_ENABLED_TRUE ? t("status.enabled.true") : t("status.enabled.false");
+  }
+  if (field.name === "key") {
+    return translateKnown({ t, labels: REPORT_KEY_SOURCE_LABELS, value: field.value });
+  }
+  if (field.name === REPORT_STATUS_FIELD) {
+    return translateKnown({ t, labels: REPORT_STATUS_LABELS, value: field.value });
+  }
+  if (field.name === "muted" && field.value === NO_MUTED_RULES) {
+    return t("status.mutedNone");
+  }
+  return field.value;
+}
+function reportToneOf(field) {
+  if (field.name !== REPORT_STATUS_FIELD) {
+    return PILL_TONE.neutral;
+  }
+  return REPORT_STATUS_TONES[field.value] ?? PILL_TONE.neutral;
+}
+
+// src/client/model/status-view.ts
+function statusViewOf({
+  t,
+  status,
+  sessionId
+}) {
+  if (status.phase === STORE_PHASE.failed) {
+    return failedView({ t, status });
+  }
+  if (status.text !== void 0) {
+    const parsed = parseReport(status.text);
+    if (parsed === void 0) {
+      return { kind: "raw", text: status.text };
+    }
+    return {
+      kind: "report",
+      rows: reportRowsOf(t, parsed.fields),
+      hint: parsed.hint
+    };
+  }
+  if (status.phase === STORE_PHASE.loading) {
+    return { kind: "text", text: t("status.loading") };
+  }
+  return {
+    kind: "text",
+    text: sessionId === void 0 ? t("status.noSession") : t("status.idle")
+  };
+}
+function failedView({
+  t,
+  status
+}) {
+  if (status.error === void 0 && status.sessionId === void 0) {
+    return { kind: "text", text: t("status.noSession") };
+  }
+  return { kind: "error", text: t("status.failed"), detail: status.error };
+}
+
+// src/client/components/status-rows.tsx
+var import_dsh_client_ui_primitives4 = require("@deepseek-ai/dsh-client-ui-primitives");
+var import_jsx_runtime4 = require("react/jsx-runtime");
+function StatusRows({
+  rows
+}) {
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("dl", { className: "sideroom-jev__rows", children: rows.map((row) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "sideroom-jev__row", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("dt", { className: "sideroom-jev__term", children: row.label }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+      "dd",
+      {
+        className: row.mono ? "sideroom-jev__value sideroom-jev__mono" : "sideroom-jev__value",
+        children: [
+          row.marked ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_dsh_client_ui_primitives4.StateDot, { state: PILL_TONE_STATE[row.tone] }) : null,
+          row.value
+        ]
+      }
+    )
+  ] }, row.name)) });
+}
+
+// src/client/components/status-section.tsx
+var import_jsx_runtime5 = require("react/jsx-runtime");
+function StatusSection({
+  t,
+  sessionId,
+  status,
+  onRefresh
+}) {
+  const view = statusViewOf({ t, status, sessionId });
+  const refreshing = status.phase === STORE_PHASE.loading;
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: "sideroom-jev__section", "aria-busy": refreshing, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("header", { className: "sideroom-jev__section-header", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("h3", { className: "sideroom-jev__heading", children: t("status.heading") }),
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        import_dsh_client_ui_primitives5.Button,
+        {
+          size: "sm",
+          variant: "outline",
+          onClick: onRefresh,
+          disabled: refreshing || sessionId === void 0,
+          children: refreshing ? t("status.refreshing") : t("status.refresh")
         }
-        const onKeyDown = (event) => {
-          if (event.key === 'Escape') {
-            event.preventDefault();
-            onClose();
-            return;
-          }
-          if (event.key !== 'Tab') {
-            return;
-          }
-          const focusable = dialog.querySelectorAll(
-            'button:not([disabled]), input:not([disabled])',
-          );
-          if (focusable.length === 0) {
-            return;
-          }
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) {
-            event.preventDefault();
-            last.focus();
-            return;
-          }
-          if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault();
-            first.focus();
-          }
-        };
-        dialog.addEventListener('keydown', onKeyDown);
-        return () => {
-          dialog.removeEventListener('keydown', onKeyDown);
-        };
-      }, [dialogRef, onClose]);
-    }
+      )
+    ] }),
+    statusBodyOf(view)
+  ] });
+}
+function statusBodyOf(view) {
+  if (view.kind === "report") {
+    return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "sideroom-jev__report", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(StatusRows, { rows: view.rows }),
+      view.hint === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "sideroom-jev__hint", children: view.hint })
+    ] });
+  }
+  if (view.kind === "raw") {
+    return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("pre", { className: "sideroom-jev__raw", children: view.text });
+  }
+  if (view.kind === "error") {
+    return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "sideroom-jev__error", children: view.detail === void 0 ? view.text : `${view.text} ${view.detail}` });
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "sideroom-jev__note", children: view.text });
+}
 
-    function useScrollLock() {
-      useEffect(() => {
-        const previous = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        return () => {
-          document.body.style.overflow = previous;
-        };
-      }, []);
+// src/client/components/jev-dialog.tsx
+var import_jsx_runtime6 = require("react/jsx-runtime");
+function JevDialog({
+  open,
+  onClose,
+  t,
+  sessionId,
+  snapshot,
+  jev
+}) {
+  const refresh = (0, import_react2.useCallback)(() => {
+    runInBackground(jev.loadStatus(sessionId));
+  }, [jev, sessionId]);
+  (0, import_react2.useEffect)(() => {
+    if (!open || sessionId === void 0) {
+      return;
     }
+    const { phase, sessionId: loadedSessionId } = snapshot.status;
+    if (phase !== STORE_PHASE.idle && loadedSessionId === sessionId) {
+      return;
+    }
+    runInBackground(jev.loadStatus(sessionId));
+  }, [jev, open, sessionId, snapshot.status]);
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+    import_dsh_client_ui_primitives6.Modal,
+    {
+      open,
+      onClose,
+      title: t("dialog.title"),
+      description: t("dialog.description"),
+      closeLabel: t("dialog.close"),
+      className: "sideroom-jev__dialog",
+      footer: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_dsh_client_ui_primitives6.Button, { variant: "outline", onClick: onClose, children: t("dialog.close") }),
+      children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "sideroom-jev__sections", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(CredentialSection, { t, snapshot, jev, onSaved: refresh }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+          StatusSection,
+          {
+            t,
+            sessionId,
+            status: snapshot.status,
+            onRefresh: refresh
+          }
+        )
+      ] })
+    }
+  );
+}
 
-    function followCredentialUpdates({ ctx, store }) {
-      ctx.effect(() => {
-        try {
-          return ctx.remote.$on(CREDENTIAL_UPDATE_EVENT, (ref) => {
-            if (ref === store.getSnapshot().keyEnv) {
-              void store.refresh();
-            }
-          });
-        } catch (error) {
-          console.error(
-            'sideroom-dsh: the Jev chip cannot follow credential updates',
-            error,
-          );
-          return () => undefined;
-        }
+// src/client/components/jev-chip.tsx
+var import_jsx_runtime7 = require("react/jsx-runtime");
+function JevChip({
+  t,
+  sessionId,
+  useJevState,
+  jev
+}) {
+  const snapshot = useJevState((current) => current);
+  const [open, setOpen] = (0, import_react3.useState)(false);
+  const openDialog = (0, import_react3.useCallback)(() => {
+    setOpen(true);
+  }, []);
+  const closeDialog = (0, import_react3.useCallback)(() => {
+    setOpen(false);
+  }, []);
+  const title = chipTitle(t, snapshot);
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+      import_dsh_client_ui_primitives7.Pill,
+      {
+        className: "sideroom-jev__chip",
+        active: open,
+        title,
+        "aria-label": title,
+        "aria-haspopup": "dialog",
+        "aria-expanded": open,
+        onClick: openDialog,
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_dsh_client_ui_primitives7.StateDot, { state: KEY_TONE_STATE[keyTone(snapshot)] }),
+          CHIP_LABEL
+        ]
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      JevDialog,
+      {
+        open,
+        onClose: closeDialog,
+        t,
+        sessionId,
+        snapshot,
+        jev
+      }
+    )
+  ] });
+}
+
+// src/client/locale/en.ts
+var en = {
+  "chip.title.withKey": "Jev: key configured",
+  "chip.title.withoutKey": "Jev: no key",
+  "chip.title.unavailable": "Jev: key state unavailable",
+  "dialog.title": "Jev settings",
+  "dialog.description": "API key and Host status.",
+  "dialog.close": "Close",
+  "key.heading": "Key",
+  "key.loading": "Reading the key state...",
+  "key.fromEnvironment": "Read from the environment variable {name}.",
+  "key.stored": "Stored credential {name}.",
+  "key.configured": "A key is configured for {name}.",
+  "key.missing": "No key for {name}.",
+  "key.unavailable": "The key state could not be read.",
+  "key.unavailableDetail": "The key state could not be read: {reason}",
+  "key.source.loading": "Reading",
+  "key.source.stored": "Stored",
+  "key.source.environment": "Environment",
+  "key.source.missing": "Missing",
+  "key.source.unavailable": "Unavailable",
+  "key.placeholder": "Paste the API key",
+  "key.save": "Save key",
+  "key.saving": "Saving...",
+  "key.remove": "Remove",
+  "key.removing": "Removing...",
+  "key.show": "Show",
+  "key.hide": "Hide",
+  "key.readOnly": "The credential store is read-only in this profile.",
+  "key.environmentLocked": "The key comes from {name}. The environment variable wins, so the stored credential is ignored while it is set.",
+  "key.privacy": "The Host writes the key to the credential store; it never enters this session or the configuration.",
+  "key.saved": "Key saved.",
+  "key.removed": "Key removed.",
+  "key.removeConfirm": "Remove the stored key from this profile?",
+  "key.removeConfirmAction": "Remove key",
+  "key.cancel": "Cancel",
+  "status.heading": "Status",
+  "status.loading": "Reading the Host status...",
+  "status.idle": "Refresh to read the Host configuration.",
+  "status.noSession": "The status comes from the conversation. Send a message, then refresh.",
+  "status.failed": "The Host did not answer the status command.",
+  "status.refresh": "Refresh",
+  "status.refreshing": "Refreshing...",
+  "status.mutedNone": "None",
+  "status.fields.enabled": "Enabled",
+  "status.fields.keyEnv": "Reference",
+  "status.fields.key": "Source",
+  "status.fields.model": "Model",
+  "status.fields.status": "State",
+  "status.fields.calls": "Calls",
+  "status.fields.cutoff": "Note cutoff",
+  "status.fields.gate": "Global gate",
+  "status.fields.muted": "Muted",
+  "status.enabled.true": "Yes",
+  "status.enabled.false": "No",
+  "status.state.ready": "Ready",
+  "status.state.noKey": "No key",
+  "status.state.off": "Off",
+  "status.state.quota": "Quota exhausted",
+  "status.state.auth": "Key rejected",
+  "status.state.rateLimited": "Rate limited",
+  "status.state.unavailable": "Unavailable",
+  "error.template": "Jev could not {action}: {reason}",
+  "error.action.save": "save the key",
+  "error.action.remove": "remove the key"
+};
+
+// src/client/locale/es.ts
+var es = {
+  "chip.title.withKey": "Jev: clave configurada",
+  "chip.title.withoutKey": "Jev: sin clave",
+  "chip.title.unavailable": "Jev: estado de la clave no disponible",
+  "dialog.title": "Configuraci\xF3n de Jev",
+  "dialog.description": "Clave de API y estado del Host.",
+  "dialog.close": "Cerrar",
+  "key.heading": "Clave",
+  "key.loading": "Leyendo el estado de la clave...",
+  "key.fromEnvironment": "Se lee de la variable de entorno {name}.",
+  "key.stored": "Credencial guardada {name}.",
+  "key.configured": "Hay una clave configurada para {name}.",
+  "key.missing": "No hay clave para {name}.",
+  "key.unavailable": "No se pudo leer el estado de la clave.",
+  "key.unavailableDetail": "No se pudo leer el estado de la clave: {reason}",
+  "key.source.loading": "Leyendo",
+  "key.source.stored": "Guardada",
+  "key.source.environment": "Entorno",
+  "key.source.missing": "Sin clave",
+  "key.source.unavailable": "No disponible",
+  "key.placeholder": "Pega la clave de API",
+  "key.save": "Guardar clave",
+  "key.saving": "Guardando...",
+  "key.remove": "Quitar",
+  "key.removing": "Quitando...",
+  "key.show": "Mostrar",
+  "key.hide": "Ocultar",
+  "key.readOnly": "El almac\xE9n de credenciales es de solo lectura en este perfil.",
+  "key.environmentLocked": "La clave viene de {name}. La variable de entorno tiene prioridad, as\xED que la credencial guardada se ignora mientras est\xE9 definida.",
+  "key.privacy": "La clave la escribe el Host en el almac\xE9n de credenciales; nunca entra a esta sesi\xF3n ni a la configuraci\xF3n.",
+  "key.saved": "Clave guardada.",
+  "key.removed": "Clave quitada.",
+  "key.removeConfirm": "\xBFQuitar la clave guardada de este perfil?",
+  "key.removeConfirmAction": "Quitar clave",
+  "key.cancel": "Cancelar",
+  "status.heading": "Estado",
+  "status.loading": "Leyendo el estado del Host...",
+  "status.idle": "Actualiza para leer la configuraci\xF3n del Host.",
+  "status.noSession": "El estado se lee de la conversaci\xF3n actual. Env\xEDa un mensaje y actualiza.",
+  "status.failed": "El Host no respondi\xF3 al comando de estado.",
+  "status.refresh": "Actualizar",
+  "status.refreshing": "Actualizando...",
+  "status.mutedNone": "Ninguna",
+  "status.fields.enabled": "Activo",
+  "status.fields.keyEnv": "Referencia",
+  "status.fields.key": "Origen",
+  "status.fields.model": "Modelo",
+  "status.fields.status": "Estado",
+  "status.fields.calls": "Llamadas",
+  "status.fields.cutoff": "Umbral de nota",
+  "status.fields.gate": "Umbral global",
+  "status.fields.muted": "Silenciadas",
+  "status.enabled.true": "S\xED",
+  "status.enabled.false": "No",
+  "status.state.ready": "Listo",
+  "status.state.noKey": "Sin clave",
+  "status.state.off": "Desactivado",
+  "status.state.quota": "Cuota agotada",
+  "status.state.auth": "Clave rechazada",
+  "status.state.rateLimited": "L\xEDmite alcanzado",
+  "status.state.unavailable": "No disponible",
+  "error.template": "Jev no pudo {action}: {reason}",
+  "error.action.save": "guardar la clave",
+  "error.action.remove": "quitar la clave"
+};
+
+// src/client/locale/index.ts
+var DICTIONARIES = { en, es };
+
+// src/client/store.ts
+var EMPTY_STATUS = Object.freeze({ phase: STORE_PHASE.idle });
+function createJevStore({
+  credentials,
+  commands
+}) {
+  let snapshot = {
+    phase: STORE_PHASE.loading,
+    keyEnv: DEFAULT_KEY_ENV,
+    status: EMPTY_STATUS
+  };
+  const listeners = /* @__PURE__ */ new Set();
+  function getSnapshot() {
+    return snapshot;
+  }
+  function subscribe(listener) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }
+  function publish(patch) {
+    snapshot = { ...snapshot, ...patch };
+    for (const listener of listeners) {
+      listener();
+    }
+  }
+  async function readKey() {
+    const response = await credentials.describe([snapshot.keyEnv]);
+    if (!response.ok) {
+      publish({ phase: STORE_PHASE.failed, error: response.error.message });
+      return;
+    }
+    publish({
+      phase: STORE_PHASE.ready,
+      error: void 0,
+      key: response.value[snapshot.keyEnv]
+    });
+  }
+  async function refresh() {
+    try {
+      await readKey();
+    } catch (error) {
+      publish({ phase: STORE_PHASE.failed, error: messageOf(error) });
+    }
+  }
+  async function runWrite(operation) {
+    try {
+      const response = await operation();
+      if (!response.ok) {
+        return response.error.message;
+      }
+      await refresh();
+      return void 0;
+    } catch (error) {
+      return messageOf(error);
+    }
+  }
+  function saveKey(value) {
+    return runWrite(() => credentials.set(snapshot.keyEnv, value));
+  }
+  function removeKey() {
+    return runWrite(() => credentials.unset(snapshot.keyEnv));
+  }
+  async function loadStatus(sessionId) {
+    if (sessionId === void 0) {
+      publish({ status: statusFailure({ sessionId, error: void 0 }) });
+      return;
+    }
+    publish({ status: statusLoading({ sessionId, text: snapshot.status.text }) });
+    try {
+      const response = await commands.execute(sessionId, STATUS_COMMAND);
+      if (!response.ok) {
+        publish({
+          status: statusFailure({ sessionId, error: response.error.message })
+        });
+        return;
+      }
+      const answer = statusAnswerOf(response.value);
+      if (answer?.kind !== "success" || answer.text === void 0) {
+        publish({
+          status: statusFailure({ sessionId, error: answer?.text })
+        });
+        return;
+      }
+      const text = answer.text;
+      const previousKeyEnv = snapshot.keyEnv;
+      const keyEnv = keyEnvOf(text) ?? previousKeyEnv;
+      publish({ status: statusReady({ sessionId, text }), keyEnv });
+      if (keyEnv !== previousKeyEnv) {
+        await refresh();
+      }
+    } catch (error) {
+      publish({
+        status: statusFailure({ sessionId, error: messageOf(error) })
       });
     }
+  }
+  return { getSnapshot, subscribe, refresh, saveKey, removeKey, loadStatus };
+}
+function statusLoading({
+  sessionId,
+  text
+}) {
+  return { phase: STORE_PHASE.loading, text, sessionId };
+}
+function statusReady({
+  sessionId,
+  text
+}) {
+  return { phase: STORE_PHASE.ready, text, sessionId };
+}
+function statusFailure({
+  sessionId,
+  error
+}) {
+  return { phase: STORE_PHASE.failed, error, sessionId };
+}
+function statusAnswerOf(execution) {
+  return execution?.result;
+}
+function keyEnvOf(report) {
+  const match = KEY_ENV_LINE.exec(report);
+  return match === null ? void 0 : match[1];
+}
+function messageOf(error) {
+  return error instanceof Error ? error.message : String(error);
+}
 
-    return {
-      inject: ['slots', 'locale', 'remote', 'remote.credentials', 'remote.commands'],
-      apply(ctx) {
-        const credentials = {
-          describe: (refs) => ctx.remote.credentials.describe(refs),
-          set: (ref, value) => ctx.remote.credentials.set(ref, value),
-          unset: (ref) => ctx.remote.credentials.unset(ref),
-        };
-        const commands = {
-          execute: (sessionId, line) =>
-            ctx.remote.commands.execute(sessionId, line, []),
-        };
-        const store = createJevStore({ credentials, commands });
+// src/client/styles/jev.css
+var jev_default = ".sideroom-jev__chip {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  height: 24px;\n  padding: 0 10px;\n}\n\n.sideroom-jev__dialog {\n  width: min(560px, calc(100vw - 48px));\n}\n\n.sideroom-jev__sections {\n  display: flex;\n  flex-direction: column;\n  gap: 24px;\n}\n\n.sideroom-jev__section {\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n}\n\n.sideroom-jev__section-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n}\n\n.sideroom-jev__heading {\n  margin: 0;\n  font-size: 13px;\n  font-weight: 500;\n  line-height: 20px;\n  color: var(--dsw-alias-label-primary);\n}\n\n.sideroom-jev__badge {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n}\n\n.sideroom-jev__source {\n  margin: 0;\n  overflow-wrap: anywhere;\n  font-size: 13px;\n  line-height: 20px;\n  color: var(--dsw-alias-label-secondary);\n}\n\n.sideroom-jev__note {\n  margin: 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n}\n\n.sideroom-jev__error {\n  margin: 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-state-error-primary);\n}\n\n.sideroom-jev__notice {\n  margin: 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-primary);\n}\n\n.sideroom-jev__actions {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.sideroom-jev__confirm {\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  padding: 12px;\n  border-radius: var(--dsw-radius-lg);\n  background: var(--dsw-alias-bg-layer-3);\n}\n\n.sideroom-jev__rows {\n  display: grid;\n  grid-template-columns: minmax(96px, max-content) 1fr;\n  gap: 8px 20px;\n  margin: 0;\n}\n\n.sideroom-jev__row {\n  display: contents;\n}\n\n.sideroom-jev__term {\n  margin: 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n}\n\n.sideroom-jev__value {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  margin: 0;\n  overflow-wrap: anywhere;\n  font-size: 13px;\n  line-height: 20px;\n  color: var(--dsw-alias-label-primary);\n}\n\n.sideroom-jev__mono {\n  font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace);\n}\n\n.sideroom-jev__raw {\n  margin: 0;\n  padding: 12px;\n  overflow-x: auto;\n  border-radius: var(--dsw-radius-lg);\n  background: var(--dsw-alias-bg-layer-3);\n  font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace);\n  font-size: 12px;\n  line-height: 18px;\n  white-space: pre-wrap;\n  color: var(--dsw-alias-label-secondary);\n}\n\n.sideroom-jev__hint {\n  margin: 0;\n  padding: 10px 12px;\n  border-radius: var(--dsw-radius-lg);\n  background: var(--dsw-alias-bg-layer-3);\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n}\n\n.sideroom-jev__field {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.sideroom-jev__input {\n  flex: 1 1 auto;\n}\n\n.sideroom-jev__report {\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n}\n\n.sideroom-jev__masked {\n  display: block;\n  overflow-wrap: anywhere;\n  word-break: break-all;\n  font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace);\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n}\n";
 
-        ensureStyles();
+// src/client/styles/install.ts
+function installStyles() {
+  const head = document.head;
+  const existing = head.querySelector(`style[${STYLE_ATTRIBUTE}]`);
+  if (existing !== null) {
+    return () => void 0;
+  }
+  const element = document.createElement("style");
+  element.setAttribute(STYLE_ATTRIBUTE, "");
+  element.textContent = jev_default;
+  head.appendChild(element);
+  return () => {
+    element.remove();
+  };
+}
 
-        for (const locale of Object.keys(DICTIONARIES)) {
-          ctx.effect(() =>
-            ctx.locale.register(LOCALE_NAMESPACE, locale, DICTIONARIES[locale]),
-          );
-        }
-
-        followCredentialUpdates({ ctx, store });
-
-        ctx.effect(() => {
-          void store.refresh();
-        });
-
-        ctx.slots.inject(SLOT_NAME, () =>
-          ctx.slots.register(
-            {
-              name: SLOT_NAME,
-              id: SLOT_ID,
-              order: CHIP_ORDER,
-              locale: LOCALE_NAMESPACE,
-              inject: () => ({ hooks: { jevState: store }, jev: store }),
-            },
-            JevChip,
-          ),
-        );
-      },
-    };
+// src/client/plugin.ts
+var inject = [
+  "slots",
+  "locale",
+  "remote",
+  "remote.credentials",
+  "remote.commands"
+];
+function apply(ctx) {
+  const credentials = {
+    describe: (refs) => ctx.remote.credentials.describe(refs),
+    set: (ref, value) => ctx.remote.credentials.set(ref, value),
+    unset: (ref) => ctx.remote.credentials.unset(ref)
+  };
+  const commands = {
+    execute: (sessionId, line) => ctx.remote.commands.execute(sessionId, line)
+  };
+  const store = createJevStore({ credentials, commands });
+  ctx.effect(() => installStyles());
+  for (const [locale, dictionary] of Object.entries(DICTIONARIES)) {
+    ctx.effect(() => ctx.locale.register(LOCALE_NAMESPACE, locale, dictionary));
+  }
+  ctx.effect(() => ctx.remote.$on(CREDENTIAL_UPDATE_EVENT, (ref) => {
+    if (ref === store.getSnapshot().keyEnv) {
+      runInBackground(store.refresh());
+    }
+  }));
+  ctx.effect(() => {
+    runInBackground(store.refresh());
+    return () => void 0;
+  });
+  ctx.slots.inject(SLOT_NAME, () => ctx.slots.register(
+    {
+      name: SLOT_NAME,
+      id: SLOT_ID,
+      order: SLOT_ORDER,
+      locale: LOCALE_NAMESPACE,
+      inject: () => ({ hooks: { jevState: store }, jev: store })
+    },
+    JevChip
+  ));
+}
+    return module.exports;
   },
 });

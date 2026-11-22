@@ -12,7 +12,7 @@ function resolverWith({
   return createKeyResolver({
     environment,
     envName: 'TYPESAFE_API_KEY',
-    credentials,
+    credentials: () => credentials,
   });
 }
 
@@ -102,4 +102,23 @@ test('a credential lookup failure is reported and ignored', async () => {
     warnings.restore();
   }
   assert.match(String(warnings.messages[0]), /store offline/);
+});
+
+test('a credential seam that activates after apply is read at resolution time', async () => {
+  const credentialSeam: { credentials: CredentialLookup | undefined } = {
+    credentials: undefined,
+  };
+  const resolve = createKeyResolver({
+    environment: {},
+    envName: 'TYPESAFE_API_KEY',
+    credentials: () => credentialSeam.credentials,
+  });
+  assert.equal(await resolve(), undefined);
+  credentialSeam.credentials = {
+    resolve: () => Promise.resolve({ value: 'stored-key' }),
+  };
+  assert.deepEqual(await resolve(), {
+    key: 'stored-key',
+    origin: 'credentials',
+  });
 });

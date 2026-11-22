@@ -1,13 +1,19 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@/index.js": ["index.ts"]
+      "@/*": [
+        "src/*"
+      ],
+      "@/index.js": [
+        "index.ts"
+      ]
     },
     "strict": true,
     "noImplicitOverride": true,
@@ -18,5 +24,12 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["index.ts", "index.test.ts", "src/**/*.ts"]
+  "include": [
+    "index.ts",
+    "index.test.ts",
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/client/**"
+  ]
 }

@@ -165,10 +165,21 @@ All internal imports use the `@/*` alias (`@/config.js`), declared in `tsconfig.
 and `paths`. `tsc` does not rewrite path mappings, so the build runs `tsc-alias` after `tsc`; the compiled
 `lib/` uses relative imports and the plugin keeps working on plain Node.
 
-`tsc` compiles `index.ts` and `src/` into `lib/`, and the bundle loads `lib/index.js`. Tests live next to
-the file they cover (`src/checks/tracker.test.ts`, `index.test.ts`) and compile to `lib/**/*.test.js`,
-which is ignored and excluded from the package. `lib/` is committed so the plugin works from a clone
-without a build step; run `npm run build` before committing source changes.
+`tsc` compiles `index.ts` and `src/` (except `src/client/`) into `lib/`, and the bundle loads
+`lib/index.js`. Tests live next to the file they cover (`src/checks/tracker.test.ts`, `index.test.ts`)
+and compile to `lib/**/*.test.js`, which is ignored and excluded from the package. `lib/` is committed
+so the plugin works from a clone without a build step; run `npm run build` before committing source
+changes.
+
+`src/client/` is the browser half. `main.ts` exports the plugin, `plugin.ts` wires the store, the
+locale dictionaries and the composer-dock slot, `store.ts` talks to the Host through the injected
+Remote ports, `model/` holds the pure view models (`report.ts`, `key-view.ts`, `status-view.ts`),
+`components/` renders with the harness UI primitives (`Modal`, `Button`, `Input`, `Pill`,
+`StateDot`), and `styles/jev.css` keeps only token-based layout. `npm run build:client` bundles that
+tree with esbuild into the single `client.js` artifact the client loader serves; `react`,
+`react/jsx-runtime` and `@deepseek-ai/dsh-client-ui-primitives` stay external and resolve from the
+browser platform table. `tsconfig.client.json` type-checks the tree, and `src/client-module.test.ts`
+loads the built artifact through a stub module loader.
 
 `npm run lint` runs ESLint with the type-aware rules, `@stylistic` formatting, and `no-comments`. The
 Husky `pre-commit` hook chains `lint-staged`, `npm run check`, and `npm run mutation` with `&&` on every

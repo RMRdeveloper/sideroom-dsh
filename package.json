@@ -46,8 +46,8 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
-    "types": "tsc -p tsconfig.json --noEmit",
+    "build": "npm run build:host && npm run build:client",
+    "types": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "mutation": "npm run build && stryker run",
@@ -60,7 +60,9 @@
     "version-packages": "changeset version",
     "prepare": "husky",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run check"
+    "prepublishOnly": "npm run check",
+    "build:host": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "build:client": "node scripts/build-client.mjs"
   },
   "lint-staged": {
     "*.{ts,mjs,js}": "eslint --fix"
@@ -88,6 +90,7 @@
     "@changesets/cli": "^3.0.2",
     "@deepseek-ai/cordis": "~4.1.0",
     "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.2-rc.5",
     "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
     "@deepseek-ai/dsh-skill": "0.2.2-rc.1",
     "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.1",
@@ -97,6 +100,8 @@
     "@stryker-mutator/tap-runner": "^10.1.1",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@types/node": "^22.20.5",
+    "@types/react": "^18.3.12",
+    "esbuild": "^0.25.0",
     "eslint": "^10.14.0",
     "eslint-plugin-no-comments": "^1.2.1",
     "globals": "^17.14.0",
