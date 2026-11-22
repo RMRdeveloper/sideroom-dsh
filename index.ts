@@ -120,7 +120,7 @@ export function apply(ctx: Context, config: unknown): Promise<void> {
     resolveKey: createKeyResolver({
       environment: process.env,
       envName: settings.jev.keyEnv,
-      credentials: credentialsLookup(ctx),
+      credentials: () => credentialsLookup(ctx),
     }),
     readText: ({ path, cwd }) => readFileText(ctx, cwd, path),
     related: (input) => relatedSource.collect(input),

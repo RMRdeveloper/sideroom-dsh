@@ -51,7 +51,7 @@ interface StoreSnapshot {
       configured: boolean;
       source?: string;
       masked?: string;
-      writable: boolean;
+      writable?: boolean;
     }
     | undefined;
   error: string | undefined;
@@ -104,11 +104,47 @@ GLOBAL_RECORD.window = {
     },
   },
 };
-GLOBAL_RECORD.document = { body: {} };
+
+const STYLE_NODES: unknown[] = [];
+const HEAD_STUB = {
+  querySelector(): null {
+    return null;
+  },
+  appendChild(node: unknown): unknown {
+    STYLE_NODES.push(node);
+    return node;
+  },
+};
+
+GLOBAL_RECORD.document = {
+  head: HEAD_STUB,
+  createElement(): unknown {
+    return {
+      setAttribute(): void {},
+      set textContent(_value: string) {},
+      remove(): void {},
+    };
+  },
+};
 
 await import(new URL('../../client.js', import.meta.url).href);
 
 let forceOpen = false;
+
+function element(
+  type: unknown,
+  props: Record<string, unknown> | null,
+): ReactElement {
+  const { children, ...rest } = props ?? {};
+  if (children === undefined) {
+    return { type, props: rest, children: [] };
+  }
+  return {
+    type,
+    props: rest,
+    children: Array.isArray(children) ? children : [children],
+  };
+}
 
 const REACT_STUB = {
   Fragment: 'Fragment',
@@ -126,11 +162,40 @@ const REACT_STUB = {
   useRef(value: unknown): { current: unknown } {
     return { current: value };
   },
-  useState(value: unknown): [unknown, () => void] {
-    if (forceOpen && value === false) {
+  useState(initial: unknown): [unknown, () => void] {
+    if (forceOpen && initial === false) {
+      forceOpen = false;
       return [true, () => undefined];
     }
-    return [value, () => undefined];
+    return [initial, () => undefined];
+  },
+};
+
+const JSX_RUNTIME_STUB = {
+  Fragment: 'Fragment',
+  jsx: element,
+  jsxs: element,
+};
+
+function primitiveStub(name: string): (props: Record<string, unknown>) => ReactElement {
+  return (props) => element('div', { ...props, 'data-primitive': name });
+}
+
+const PRIMITIVES_STUB = {
+  Button: primitiveStub('Button'),
+  Input: primitiveStub('Input'),
+  Pill: primitiveStub('Pill'),
+  StateDot(props: Record<string, unknown>): ReactElement {
+    return element('span', {
+      'data-primitive': 'StateDot',
+      'data-state': props.state,
+    });
+  },
+  Modal(props: Record<string, unknown>): ReactElement | null {
+    if (props.open !== true) {
+      return null;
+    }
+    return element('div', { ...props, 'data-primitive': 'Modal' });
   },
 };
 
@@ -138,8 +203,11 @@ function fakeRequire(name: string): unknown {
   if (name === 'react') {
     return REACT_STUB;
   }
-  if (name === 'react-dom') {
-    return { createPortal: (node: unknown) => node };
+  if (name === 'react/jsx-runtime') {
+    return JSX_RUNTIME_STUB;
+  }
+  if (name === '@deepseek-ai/dsh-client-ui-primitives') {
+    return PRIMITIVES_STUB;
   }
   throw new Error(`unexpected require: ${name}`);
 }
@@ -191,7 +259,7 @@ function harnessOf({
 
   const context = {
     locale: {
-      register(_ns: string, locale: string, dictionary: Record<string, string>): () => void {
+      register(_namespace: string, locale: string, dictionary: Record<string, string>): () => void {
         dictionaries.push(locale);
         messages[locale] = dictionary;
         return () => undefined;
@@ -267,6 +335,91 @@ function harnessOf({
   };
 }
 
+function translatorOf(
+  harness: Harness,
+  locale: string,
+): (key: string, params?: Record<string, string>) => string {
+  return (key, params) => {
+    const dictionary = harness.messages[locale] ?? {};
+    let text = dictionary[key] ?? key;
+    for (const [name, value] of Object.entries(params ?? {})) {
+      text = text.replaceAll(`{${name}}`, value);
+    }
+    return text;
+  };
+}
+
+function renderChip(
+  harness: Harness,
+  { open = false, sessionId, translate = false }: {
+    open?: boolean;
+    sessionId?: string | undefined;
+    translate?: boolean;
+  },
+): ReactElement {
+  const chip = harness.component as (props: Record<string, unknown>) => ReactElement;
+  forceOpen = open;
+  const tree = chip({
+    t: translate ? translatorOf(harness, 'en') : (key: string) => key,
+    sessionId,
+    useJevState: () => harness.store.getSnapshot(),
+    jev: harness.store,
+  });
+  forceOpen = false;
+  return tree;
+}
+
+function isReactElement(node: unknown): node is ReactElement {
+  return typeof node === 'object' && node !== null && 'type' in node;
+}
+
+function flattenNodes(node: unknown): ReactElement[] {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return [];
+  }
+  if (Array.isArray(node)) {
+    return node.flatMap((child) => flattenNodes(child));
+  }
+  if (typeof node === 'string' || typeof node === 'number') {
+    return [];
+  }
+  if (!isReactElement(node)) {
+    return [];
+  }
+  if (typeof node.type === 'function') {
+    const render = node.type as (props: Record<string, unknown>) => unknown;
+    return flattenNodes(render({ ...node.props, children: node.children }));
+  }
+  return [node, ...node.children.flatMap((child) => flattenNodes(child))];
+}
+
+function dialogNodes(
+  harness: Harness,
+  sessionId: string | undefined = SESSION_ID,
+): ReactElement[] {
+  return flattenNodes(renderChip(harness, {
+    open: true,
+    sessionId,
+    translate: true,
+  }));
+}
+
+function nodesOf(nodes: ReactElement[], primitive: string): ReactElement[] {
+  return nodes.filter((node) => node.props['data-primitive'] === primitive);
+}
+
+function textOf(nodes: ReactElement[]): string {
+  const parts: string[] = [];
+  for (const node of nodes) {
+    for (const child of node.children) {
+      if (typeof child === 'string') {
+        parts.push(child);
+      }
+    }
+  }
+  return parts.join(' ');
+}
+
 test('the bundle registers the package module and its client services', () => {
   const plugin = pluginOf();
   assert.deepEqual(plugin.inject, [
@@ -286,6 +439,7 @@ test('the bundle fills the composer dock with one localized chip', () => {
   assert.equal(harness.slotOptions?.order, 30);
   assert.equal(harness.slotOptions?.locale, 'sideroom-jev');
   assert.deepEqual(harness.dictionaries, ['en', 'es']);
+  assert.equal(STYLE_NODES.length, 1);
 });
 
 test('the first read describes the default credential reference', async () => {
@@ -423,35 +577,31 @@ test('a forwarded credential update refreshes only the tracked reference', async
   assert.equal(harness.describeCalls.length, before + 1);
 });
 
-function renderChip(harness: Harness): ReactElement {
-  const chip = harness.component as (
-    props: Record<string, unknown>,
-  ) => ReactElement;
-  return chip({
-    t: (key: string): string => key,
-    sessionId: SESSION_ID,
-    useJevState: () => harness.store.getSnapshot(),
-    jev: harness.store,
-  });
+function chipButton(nodes: ReactElement[]): ReactElement {
+  const [pill] = nodesOf(nodes, 'Pill');
+  assert.ok(pill !== undefined, 'the chip renders no Pill');
+  return pill;
 }
 
-function chipButton(harness: Harness): ReactElement {
-  const tree = renderChip(harness);
-  return tree.children[0] as ReactElement;
+function chipDotState(nodes: ReactElement[]): unknown {
+  const [dot] = nodesOf(nodes, 'StateDot');
+  assert.ok(dot !== undefined, 'the chip renders no StateDot');
+  return dot.props['data-state'];
 }
 
 test('the chip title follows the key state', async () => {
   const harness = harnessOf();
   await harness.store.refresh();
-  const button = chipButton(harness);
-  assert.equal(button.props.title, 'chip.title.withKey');
-  const dot = button.children[0] as ReactElement;
-  assert.equal(dot.props['data-state'], 'configured');
+  const nodes = flattenNodes(renderChip(harness, { sessionId: SESSION_ID }));
+  assert.equal(chipButton(nodes).props.title, 'chip.title.withKey');
+  assert.equal(chipDotState(nodes), 'done');
 });
 
 test('the chip avoids a key claim before the first read', () => {
   const harness = harnessOf();
-  assert.equal(chipButton(harness).props.title, 'chip.title.unavailable');
+  const nodes = flattenNodes(renderChip(harness, { sessionId: SESSION_ID }));
+  assert.equal(chipButton(nodes).props.title, 'chip.title.unavailable');
+  assert.equal(chipDotState(nodes), 'ongoing');
 });
 
 test('the chip names the missing key after an empty read', async () => {
@@ -465,96 +615,10 @@ test('the chip names the missing key after an empty read', async () => {
       } satisfies RemoteAnswer),
   });
   await harness.store.refresh();
-  const button = chipButton(harness);
-  assert.equal(button.props.title, 'chip.title.withoutKey');
-  const dot = button.children[0] as ReactElement;
-  assert.equal(dot.props['data-state'], 'missing');
+  const nodes = flattenNodes(renderChip(harness, { sessionId: SESSION_ID }));
+  assert.equal(chipButton(nodes).props.title, 'chip.title.withoutKey');
+  assert.equal(chipDotState(nodes), 'warning');
 });
-
-type ReactNode = ReactElement | string | number | boolean | null | undefined | ReactNode[];
-
-function isReactElement(node: ReactNode): node is ReactElement {
-  return typeof node === 'object' && node !== null && 'type' in node;
-}
-
-function childrenOf(element: ReactElement): ReactNode[] {
-  return element.children as ReactNode[];
-}
-
-function flattenNodes(node: ReactNode): ReactElement[] {
-  if (node === null || node === undefined || typeof node === 'boolean') {
-    return [];
-  }
-  if (Array.isArray(node)) {
-    return node.flatMap((child) => flattenNodes(child));
-  }
-  if (typeof node === 'string' || typeof node === 'number') {
-    return [];
-  }
-  if (!isReactElement(node)) {
-    return [];
-  }
-  if (typeof node.type === 'function') {
-    const render = node.type as (props: Record<string, unknown>) => ReactNode;
-    return flattenNodes(render(node.props));
-  }
-  return [node, ...childrenOf(node).flatMap((child) => flattenNodes(child))];
-}
-
-function nodesWithClass(nodes: ReactElement[], className: string): ReactElement[] {
-  return nodes.filter((node) => {
-    const value = node.props.className;
-    if (typeof value !== 'string') {
-      return false;
-    }
-    return value.split(' ').includes(className);
-  });
-}
-
-function textOf(nodes: ReactElement[]): string {
-  const parts: string[] = [];
-  for (const node of nodes) {
-    for (const child of childrenOf(node)) {
-      if (typeof child === 'string') {
-        parts.push(child);
-      }
-    }
-  }
-  return parts.join(' ');
-}
-
-function translatorOf(
-  harness: Harness,
-  locale: string,
-): (key: string, params?: Record<string, string>) => string {
-  return (key, params) => {
-    const dictionary = harness.messages[locale] ?? {};
-    let text = dictionary[key] ?? key;
-    for (const [name, value] of Object.entries(params ?? {})) {
-      text = text.replaceAll(`{${name}}`, value);
-    }
-    return text;
-  };
-}
-
-function openDialogOf(harness: Harness, sessionId: string | undefined = SESSION_ID): ReactElement {
-  forceOpen = true;
-  const chip = harness.component as (props: Record<string, unknown>) => ReactElement;
-  const tree = chip({
-    t: translatorOf(harness, 'en'),
-    sessionId,
-    useJevState: () => harness.store.getSnapshot(),
-    jev: harness.store,
-  });
-  forceOpen = false;
-  const dialog = tree.children.find((child) => {
-    const element = child as ReactNode;
-    return isReactElement(element) && typeof element.type === 'function';
-  }) as ReactElement | undefined;
-  assert.ok(dialog !== undefined, 'the open chip renders no dialog');
-  const render = dialog.type as (props: Record<string, unknown>) => ReactElement;
-  return render({ ...dialog.props });
-}
 
 test('the dialog hides the write controls when the environment owns the key', async () => {
   const harness = harnessOf({
@@ -567,9 +631,10 @@ test('the dialog hides the write controls when the environment owns the key', as
       } satisfies RemoteAnswer),
   });
   await harness.store.refresh();
-  const nodes = flattenNodes(openDialogOf(harness));
-  assert.equal(nodesWithClass(nodes, 'sdjev-input').length, 0);
-  assert.equal(nodesWithClass(nodes, 'sdjev-button-primary').length, 0);
+  const nodes = dialogNodes(harness);
+  assert.equal(nodesOf(nodes, 'Input').length, 0);
+  const primary = nodesOf(nodes, 'Button').filter((node) => node.props.variant === 'primary');
+  assert.equal(primary.length, 0);
   assert.match(textOf(nodes), /environment variable wins/u);
 });
 
@@ -584,9 +649,11 @@ test('a missing key renders the input with a disabled save', async () => {
       } satisfies RemoteAnswer),
   });
   await harness.store.refresh();
-  const nodes = flattenNodes(openDialogOf(harness));
-  assert.equal(nodesWithClass(nodes, 'sdjev-input').length, 1);
-  const [save] = nodesWithClass(nodes, 'sdjev-button-primary');
+  const nodes = dialogNodes(harness);
+  assert.equal(nodesOf(nodes, 'Input').length, 1);
+  const [save] = nodesOf(nodes, 'Button').filter(
+    (node) => node.props.variant === 'primary',
+  );
   assert.ok(save !== undefined);
   assert.equal(save.props.disabled, true);
 });
@@ -594,9 +661,9 @@ test('a missing key renders the input with a disabled save', async () => {
 test('a status report renders labelled rows instead of the raw block', async () => {
   const harness = harnessOf();
   await harness.store.loadStatus(SESSION_ID);
-  const nodes = flattenNodes(openDialogOf(harness));
-  assert.equal(nodesWithClass(nodes, 'sdjev-status').length, 0);
-  assert.equal(nodesWithClass(nodes, 'sdjev-fields').length, 1);
+  const nodes = dialogNodes(harness);
+  assert.equal(nodes.filter((node) => node.type === 'dl').length, 1);
+  assert.equal(nodes.filter((node) => node.type === 'pre').length, 0);
   const text = textOf(nodes);
   assert.match(text, /Source/u);
   assert.match(text, /Stored/u);
@@ -612,8 +679,8 @@ test('an unparsed status report falls back to the raw block', async () => {
       } satisfies RemoteAnswer),
   });
   await harness.store.loadStatus(SESSION_ID);
-  const nodes = flattenNodes(openDialogOf(harness));
-  assert.equal(nodesWithClass(nodes, 'sdjev-status').length, 1);
+  const nodes = dialogNodes(harness);
+  assert.equal(nodes.filter((node) => node.type === 'pre').length, 1);
 });
 
 test('a failed status carries the transport message', async () => {
@@ -621,14 +688,23 @@ test('a failed status carries the transport message', async () => {
     execute: () => Promise.resolve({ ok: false, error: { message: 'no agent' } }),
   });
   await harness.store.loadStatus(SESSION_ID);
-  const text = textOf(flattenNodes(openDialogOf(harness)));
+  const text = textOf(dialogNodes(harness));
   assert.match(text, /did not answer the status command/u);
   assert.match(text, /no agent/u);
+});
+
+test('the masked credential preview keeps its own line', async () => {
+  const harness = harnessOf();
+  await harness.store.refresh();
+  const nodes = dialogNodes(harness);
+  const masked = nodes.filter((node) => node.type === 'code');
+  assert.equal(masked.length, 1);
+  assert.deepEqual(masked[0]?.children, ['sk-...abcd']);
 });
 
 test('a session without a conversation explains where the status comes from', async () => {
   const harness = harnessOf();
   await harness.store.loadStatus(undefined);
-  const text = textOf(flattenNodes(openDialogOf(harness, undefined)));
+  const text = textOf(dialogNodes(harness, undefined));
   assert.match(text, /Send a message, then refresh/u);
 });

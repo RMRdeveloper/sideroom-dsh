@@ -9,10 +9,12 @@ export interface CredentialLookup {
   resolve(ref: string): Promise<{ value: string } | undefined>;
 }
 
+export type CredentialLookupSource = () => CredentialLookup | undefined;
+
 export interface KeyResolverOptions {
   environment: Readonly<Record<string, string | undefined>>;
   envName: string;
-  credentials: CredentialLookup | undefined;
+  credentials: CredentialLookupSource;
 }
 
 export function createKeyResolver({
@@ -25,11 +27,12 @@ export function createKeyResolver({
     if (fromEnvironment !== undefined) {
       return { key: fromEnvironment, origin: 'environment' };
     }
-    if (credentials === undefined) {
+    const lookup = credentials();
+    if (lookup === undefined) {
       return undefined;
     }
     try {
-      const stored = await credentials.resolve(envName);
+      const stored = await lookup.resolve(envName);
       const value = nonEmpty(stored?.value);
       return value === undefined
         ? undefined

@@ -9,16 +9,16 @@ const style = stylistic.configs.customize({
   indent: 2,
   quotes: 'single',
   semi: true,
-  jsx: false,
+  jsx: true,
   commaDangle: 'always-multiline',
   arrowParens: true,
   braceStyle: '1tbs',
 });
 
 export default defineConfig(
-  globalIgnores(['lib/**', 'node_modules/**', 'coverage/**']),
+  globalIgnores(['lib/**', 'node_modules/**', 'coverage/**', 'client.js']),
   {
-    files: ['**/*.ts'],
+    files: ['**/*.ts', '**/*.tsx'],
     extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       globals: {
@@ -26,7 +26,7 @@ export default defineConfig(
       },
       sourceType: 'module',
       parserOptions: {
-        projectService: true,
+        project: ['./tsconfig.json', './tsconfig.client.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -52,7 +52,10 @@ export default defineConfig(
         'error',
         { allowExpressions: true },
       ],
-      '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
       '@typescript-eslint/prefer-optional-chain': 'error',
       'eqeqeq': ['error', 'always', { null: 'ignore' }],
@@ -69,19 +72,6 @@ export default defineConfig(
     },
   },
   {
-    files: ['client.js'],
-    extends: [js.configs.recommended],
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-      },
-      sourceType: 'script',
-    },
-    linterOptions: {
-      noInlineConfig: true,
-    },
-  },
-  {
     files: ['**/*.mjs'],
     extends: [js.configs.recommended],
     languageOptions: {
@@ -95,7 +85,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['**/*.{ts,mjs}', 'client.js'],
+    files: ['**/*.{ts,tsx,mjs}'],
     plugins: {
       ...style.plugins,
       'no-comments': noComments,
