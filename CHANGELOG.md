@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.2
+
+### Patch Changes
+
+- 37c5ebb: Split the Jev client into `src/client/` modules built with esbuild into the single `client.js`
+  artifact, render the dialog with the harness UI primitives, and keep the masked credential preview
+  inside the dialog width instead of overflowing the card.
+- 37c5ebb: Read the credential seam when the Jev key is resolved instead of capturing it while the plugin applies, so a stored key is found even when the credentials service finishes activating after this plugin.
+
 ## 0.5.1
 
 ### Patch Changes
