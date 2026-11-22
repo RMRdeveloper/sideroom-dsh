@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.3
+
+### Patch Changes
+
+- c0781c6: Send the empty attachment list with the Jev status command, so the Host accepts
+  the call, and refresh the injected stylesheet instead of skipping it when a
+  previous bundle already left a style element behind.
+
 ## 0.5.2
 
 ### Patch Changes
