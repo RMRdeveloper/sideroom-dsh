@@ -91,7 +91,7 @@ interface Harness {
   describeCalls: string[][];
   setCalls: Array<[string, string]>;
   unsetCalls: string[];
-  commandCalls: Array<[string, string]>;
+  commandCalls: Array<[string, string, unknown]>;
   emitCredentialUpdate(ref: string): void;
 }
 
@@ -105,12 +105,24 @@ GLOBAL_RECORD.window = {
   },
 };
 
-const STYLE_NODES: unknown[] = [];
+interface StyleElementStub {
+  attributes: Set<string>;
+  contents: string[];
+  removed: boolean;
+  textContent: string;
+  setAttribute(name: string): void;
+  remove(): void;
+}
+
+const STYLE_NODES: StyleElementStub[] = [];
 const HEAD_STUB = {
-  querySelector(): null {
-    return null;
+  querySelector(selector: string): StyleElementStub | null {
+    if (selector !== 'style[data-sideroom-jev]') {
+      return null;
+    }
+    return STYLE_NODES[0] ?? null;
   },
-  appendChild(node: unknown): unknown {
+  appendChild(node: StyleElementStub): StyleElementStub {
     STYLE_NODES.push(node);
     return node;
   },
@@ -118,12 +130,25 @@ const HEAD_STUB = {
 
 GLOBAL_RECORD.document = {
   head: HEAD_STUB,
-  createElement(): unknown {
-    return {
-      setAttribute(): void {},
-      set textContent(_value: string) {},
-      remove(): void {},
+  createElement(): StyleElementStub {
+    const element: StyleElementStub = {
+      attributes: new Set<string>(),
+      contents: [],
+      removed: false,
+      setAttribute(name: string): void {
+        element.attributes.add(name);
+      },
+      get textContent(): string {
+        return element.contents.at(-1) ?? '';
+      },
+      set textContent(value: string) {
+        element.contents.push(value);
+      },
+      remove(): void {
+        element.removed = true;
+      },
     };
+    return element;
   },
 };
 
@@ -252,7 +277,7 @@ function harnessOf({
   const describeCalls: string[][] = [];
   const setCalls: Array<[string, string]> = [];
   const unsetCalls: string[] = [];
-  const commandCalls: Array<[string, string]> = [];
+  const commandCalls: Array<[string, string, unknown]> = [];
   const listeners = new Set<(ref: string) => void>();
   let slotOptions: SlotOptions | undefined;
   let component: unknown;
@@ -292,8 +317,12 @@ function harnessOf({
         },
       },
       commands: {
-        execute(sessionId: string, line: string): Promise<RemoteAnswer> {
-          commandCalls.push([sessionId, line]);
+        execute(
+          sessionId: string,
+          line: string,
+          attachments: unknown,
+        ): Promise<RemoteAnswer> {
+          commandCalls.push([sessionId, line, attachments]);
           return execute(sessionId, line);
         },
       },
@@ -442,6 +471,16 @@ test('the bundle fills the composer dock with one localized chip', () => {
   assert.equal(STYLE_NODES.length, 1);
 });
 
+test('a rebuilt client refreshes the stylesheet it already injected', () => {
+  assert.equal(STYLE_NODES.length, 1);
+  const element = STYLE_NODES[0];
+  assert.ok(element !== undefined);
+  const refreshes = element.contents.length;
+  harnessOf();
+  assert.equal(STYLE_NODES.length, 1);
+  assert.equal(element.contents.length, refreshes + 1);
+});
+
 test('the first read describes the default credential reference', async () => {
   const harness = harnessOf();
   await harness.store.refresh();
@@ -499,7 +538,10 @@ test('a thrown write is reported as its message', async () => {
 test('the status runs the host command and stores the report', async () => {
   const harness = harnessOf();
   await harness.store.loadStatus(SESSION_ID);
-  assert.deepEqual(harness.commandCalls, [[SESSION_ID, '/jev status']]);
+  assert.deepEqual(
+    harness.commandCalls,
+    [[SESSION_ID, '/jev status', []]],
+  );
   const snapshot = harness.store.getSnapshot();
   assert.equal(snapshot.status.phase, 'ready');
   assert.equal(snapshot.status.text, STATUS_REPORT);

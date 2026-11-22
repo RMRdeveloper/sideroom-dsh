@@ -3,14 +3,15 @@ import styles from './jev.css';
 
 export function installStyles(): () => void {
   const head = document.head;
-  const existing = head.querySelector(`style[${STYLE_ATTRIBUTE}]`);
-  if (existing !== null) {
-    return () => undefined;
-  }
-  const element = document.createElement('style');
+  const existing = head.querySelector<HTMLStyleElement>(
+    `style[${STYLE_ATTRIBUTE}]`,
+  );
+  const element = existing ?? document.createElement('style');
   element.setAttribute(STYLE_ATTRIBUTE, '');
   element.textContent = styles;
-  head.appendChild(element);
+  if (existing === null) {
+    head.appendChild(element);
+  }
   return () => {
     element.remove();
   };

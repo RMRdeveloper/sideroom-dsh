@@ -11,7 +11,13 @@ import { DICTIONARIES } from './locale';
 import { runInBackground } from './run';
 import { createJevStore } from './store';
 import { installStyles } from './styles/install';
-import type { CommandPort, CredentialPort, JevStore } from './types';
+import type {
+  CommandOutcome,
+  CommandPort,
+  CredentialPort,
+  JevStore,
+  RemoteAnswer,
+} from './types';
 
 export const inject = [
   'slots',
@@ -21,9 +27,17 @@ export const inject = [
   'remote.commands',
 ];
 
+interface CommandRemote {
+  execute(
+    sessionId: string,
+    line: string,
+    attachments: readonly unknown[],
+  ): Promise<RemoteAnswer<CommandOutcome | undefined>>;
+}
+
 interface ClientRemote {
   credentials: CredentialPort;
-  commands: CommandPort;
+  commands: CommandRemote;
   $on(event: string, listener: (ref: string) => void): () => void;
 }
 
@@ -65,7 +79,8 @@ export function apply(ctx: ClientContext): void {
     unset: (ref) => ctx.remote.credentials.unset(ref),
   };
   const commands: CommandPort = {
-    execute: (sessionId, line) => ctx.remote.commands.execute(sessionId, line),
+    execute: (sessionId, line) =>
+      ctx.remote.commands.execute(sessionId, line, []),
   };
   const store = createJevStore({ credentials, commands });
 
